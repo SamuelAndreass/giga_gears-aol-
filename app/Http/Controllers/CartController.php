@@ -24,20 +24,15 @@ class CartController extends Controller
     {
         $product = Product::findOrFail($productId);
 
-        // Cek apakah user sudah punya cart aktif
         $cart = Cart::firstOrCreate(
             ['user_id' => auth()->id(), 'status' => 'active'],
             ['total_price' => 0]
         );
 
-        // Cek apakah produk sudah ada di cart
         $item = $cart->items()->where('product_id', $productId)->first();
-
         if ($item) {
-            // Update jumlah
             $item->increment('qty', $request->input('qty', 1));
         } else {
-            // Tambah item baru
             $cart->items()->create([
                 'product_id' => $productId,
                 'qty' => $request->input('qty', 1),
@@ -45,7 +40,6 @@ class CartController extends Controller
             ]);
         }
 
-        // Update total
         $cart->update([
             'total_price' => $cart->items->sum(fn($i) => $i->qty * $i->price)
         ]);
@@ -62,8 +56,6 @@ class CartController extends Controller
         ]);
 
         $item->update(['qty' => $request->qty]);
-
-        // Update total cart
         $cart = $item->cart;
         $cart->update([
             'total_price' => $cart->items->sum(fn($i) => $i->qty * $i->price)
@@ -95,7 +87,6 @@ class CartController extends Controller
                 ->where('status', 'active')
                 ->firstOrFail();
 
-            // Buat order baru
             $order = Order::create([
                 'user_id' => auth()->id(),
                 'order_date' => now(),
@@ -116,7 +107,6 @@ class CartController extends Controller
                 $item->product->decrement('stock', $item->qty);
             }
 
-            // Ubah status cart jadi 'checked_out'
             $cart->update(['status' => 'checked_out']);
             $cart->items()->delete();
         });

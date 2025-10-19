@@ -14,17 +14,6 @@ use phpDocumentor\Reflection\Types\Null_;
 
 class SellerController extends Controller
 {
-    //
-    public function create(){
-        $user = Auth::user();
-
-        if($user -> is_seller){
-            return redirect()->route('seller.dashboard')->with('Message', 'anda sudah terdaftar sebagai seller');
-        }
-
-        return view('seller.register');
-    }
-
     public function viewMainDashboard(){
         return view('seller.dashboard');
     }
@@ -33,7 +22,7 @@ class SellerController extends Controller
             'store_name' => 'required|string|max:255|unique:seller_profiles,store_name',
             'store_phone' => 'nullable|string|max:20',
             'store_address' => 'nullable|string|max:255',   
-            'logo' => 'nullable|image|mimes:jpg,jpeg,png|max:1024', // maks 1MB
+            'logo' => 'nullable|image|mimes:jpg,jpeg,png|max:1024',
             'banner' => 'nullable|image|mimes:jpg,jpeg,png|max:2048',
             'province' => 'nullable|string|max:50',
             'city' => 'nullable|string|max:50',
@@ -47,15 +36,12 @@ class SellerController extends Controller
         if(!$user->is_seller) {
             $user->save(['is_seller' => true]);
             $user->update(['role' => 'seller']);
-
             SellerStore::create([
                 'user_id' => $user->id,
                 'store_name' => $request->store_name,
                 'store_phone' => $request->store_phone,
                 'store_address' => $request->store_address, 
             ]);
-            
-
             return redirect()->route('seller.dashboard')->with('message', 'Selamat! Toko and berhasil dibuat.');
         }
     }
@@ -66,8 +52,7 @@ class SellerController extends Controller
             $q->where('seller_store', $seller->id);
         })->with(['items.product', 'user'])
         ->latest('order_date')
-        ->get();
-
+        ->paginate(10);
         return view('', compact('orders'));
     }
 
@@ -76,11 +61,17 @@ class SellerController extends Controller
         $request->validate(['status'=> 'required|string']);
         $order = Order::findOrFail($id);
         $order->update(['status'=> $request->status]);
-
         return back()->with('message', 'Berhasil merubah status');
     }
 
-    public function validProduct(Request $request){
+    public function viewProd(){
+        $seller = auth()->user()->sellerStore;
+        $product = Product::where('seller_store_id', '=', $seller->id)
+        ->paginate(10);
+        return view('', compact('product'));
+    }
+
+    public function addProduct(Request $request){
         $seller = auth()->user()->sellerStore;
         $request->validate([
             'name' => 'required|string|max:255',
@@ -103,12 +94,10 @@ class SellerController extends Controller
             'color' => 'nullable|string|max:50',
             'image' => 'required|image|mimes:jpg,jpeg,png,webp|max:2048',
         ]);
-        
         $imagePath = null;
         if($request->hasFile('image')){
             $imagePath = $request->file('image')->store('products', 'public');
         }
-        
         Product::create([
             'name' => $request->name,
             'category_id' => $request->category_id,
@@ -120,59 +109,42 @@ class SellerController extends Controller
             'discount' => $request->discount,
             'color'  => $request->color,
             'images'  => $imagePath,
-
         ]);
-
         return back()->with('message', 'Berhasil menambahkan product');
     }
 
-    public function saveProduct(){
-
+    public function deleteProd(Product $product){
+         $seller = auth()->user()->sellerStore;
+         abort_unless($product->seller_store_id == $seller->id, 403, 'Anda tidak memiliki akses untuk mengubah product ini!');
+         $product->delete();
+         return back()->with('message', 'Berhasil menghapus product.');
     }
 
+    public function updateStock(Request $request, Product $product){
+        $seller = auth()->user()->sellerStore;
+        abort_unless($product->seller_store_id == $seller->id, 403, 'Anda tidak memiliki akses untuk mengubah product ini!');
+        $validated = $request->validate(['stock' => 'required|integer|min:0']);
+        $product->update(['stock'=> $validated['stock']]);
+        return back()->with('message', 'Stock berhasil diperbaharui');
+    }
 
     public function viewReviewProduct(){
         $seller = auth()->user()->sellerStore;
         $review = ProductReview::whereHas('product', fn($q)=> $q->where('seller_store_id', $user->id))
-        ->with(['product', 'user'])
-        ->get();
+        ->with(['product', 'user'])->latest()->paginate(10);
         return view('', compact('review'));
     }
 
     public function viewAnalyticsReview(){
         $seller = auth()->user()->sellerStore;
-
         $total_revenue_this_month = OrderItem::whereHas('product', fn($q) => $q->where('seller_store_id', $seller->id))
-        ->whereHas('order', fn($q)=>
-            $q->where('status', 'paid')
-            ->whereMonth('order_date', now()->month())
-        )->sum(DB::raw('price * qty'));
-
+        ->whereHas('order', fn($q)=>$q->where('status', 'paid')->whereMonth('order_date', now()->month()))
+        ->sum(DB::raw('price * qty'));
         $total_order = Order::whereHas('items.product', fn($q)=> $q->where('seller_store_id', $seller->id))
-        ->where('status', 'paid')
-        ->count();
-
-        $product_sold = OrderItem::whereHas('product', fn($q)=> $q->where('seller_store_id', $seller->id))
-        ->sum('qty');
-
-        $total_customers = User::whereHas('orders.items.product', fn($q) =>
-                $q->where('seller_store_id', $seller->id)
-            )
-        ->distinct()
-        ->count();
-
-        $best_selliing_prod = OrderItem::whereHas('product' , fn($q) =>
-        $q->where('seller_store_id', $seller->id))
-        ->select('product_id', DB::raw('SUM(qty) as sold_items'))
-        ->groupBy('product_id')
-        ->with(['product:id,name,images'])
-        ->take(5)
-        ->get();
-
+        ->where('status', 'paid')->count();
+        $product_sold = OrderItem::whereHas('product', fn($q)=> $q->where('seller_store_id', $seller->id))->sum('qty');
+        $total_customers = User::whereHas('orders.items.product', fn($q)=>$q->where('seller_store_id', $seller->id))->distinct()->count();
+        $best_selliing_prod = OrderItem::whereHas('product' , fn($q)=>$q->where('seller_store_id', $seller->id))->select('product_id', DB::raw('SUM(qty) as sold_items'))->groupBy('product_id')->with(['product:id,name,images'])->take(5)->get();
         return view('', compact('total_revenue_this_month', 'total_order' ,'product_sold', 'total_customer', 'best_selliing_prod'));
-
-
     }
-   
-
 }
