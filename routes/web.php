@@ -46,9 +46,7 @@ Route::middleware(['auth','ensure.seller'])->group(function(){
 
 // admin
 Route::middleware(['auth:web', 'ensure.admin'])->group(function(){
-    Route::get('/admin/dashboard', function(){
-        return view('admin.admin-dashboard');
-    })->name('admin.dashboard');
+    Route::get('/admin/dashboard', []);
 });
 
 

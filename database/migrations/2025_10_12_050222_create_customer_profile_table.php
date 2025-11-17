@@ -15,13 +15,11 @@ return new class extends Migration
             $table->id();
             $table->timestamps();
             $table->foreignId('user_id')->constrained()->onDelete('cascade');
-            $table->string('customer_name');
             $table->string('phone')->nullable();
             $table->string('address')->nullable();
             $table->string('city')->nullable();
             $table->string('postal_code')->nullable();
             $table->string('country')->nullable();
-            $table->boolean('is_seller')->default(false);
         });
     }
 

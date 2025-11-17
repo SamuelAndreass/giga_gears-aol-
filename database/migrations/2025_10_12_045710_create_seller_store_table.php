@@ -15,6 +15,7 @@ return new class extends Migration
             $table->id();
             $table->foreignId('user_id')->constrained()->onDelete('Cascade');
             $table->timestamps();
+            $table->string('store_code')->unique();
             $table->string('store_logo')->nullable();
             $table->string('store_banner')->nullable();
             $table->string('store_name');
@@ -28,6 +29,8 @@ return new class extends Migration
             $table->string('business_category')->nullable();
             $table->time('open_time')->nullable();
             $table->time('close_time')->nullable();
+            $table->enum('status', ['active', 'pending','suspend'])->nullable();
+            $table->timestamp('verified_at');$table->foreignId('verified_by')->constrained('users', 'id');
         });
     }
 

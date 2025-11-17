@@ -17,6 +17,7 @@ return new class extends Migration
             $table->foreignId('order_id')->constrained()->onDelete('cascade');
             $table->foreignId('product_id')->constrained()->onDelete('cascade');
             $table->integer('qty');
+            $table->string('sku')->nullable();
             $table->decimal('price', 12, 2);
         });
     }

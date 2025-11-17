@@ -14,6 +14,7 @@ return new class extends Migration
         Schema::create('orders', function (Blueprint $table) {
             $table->id();
             $table->timestamps();
+            $table->string('order_code')->unique();
             $table->foreignId('user_id')->constrained()->onDelete('cascade');
             $table->date('order_date');
             $table->decimal('total_amount', 12, 2);

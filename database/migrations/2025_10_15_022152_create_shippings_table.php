@@ -13,6 +13,15 @@ return new class extends Migration
     {
         Schema::create('shippings', function (Blueprint $table) {
             $table->id();
+            $table->string('name');
+            $table->string('service_type');
+            $table->decimal('base_rate', 10, 2);
+            $table->decimal('per_kg', 10, 2)->default(0);
+            $table->unsignedTinyInteger('min_delivery_days')->nullable();
+            $table->unsignedTinyInteger('max_delivery_days')->nullable();
+            $table->string('coverage');
+            $table->enum('status', ['active', 'inactive'])->default('active');
+            $table->string('logo')->nullable();
             $table->timestamps();
         });
     }

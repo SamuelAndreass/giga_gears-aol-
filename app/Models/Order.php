@@ -16,4 +16,13 @@ class Order extends Model
     public function user(){
         return $this->belongsTo(User::class);
     }
+
+    protected static function boot() {
+        parent::boot();
+        static::creating(function ($order) {
+            $last = self::latest('id')->first();
+            $next = $last ? $last->id + 1 : 1;
+            $order->order_code = 'ORD-' . str_pad($next, 4, '0', STR_PAD_LEFT);
+        });
+    }
 }
