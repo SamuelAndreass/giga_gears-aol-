@@ -10,7 +10,8 @@ use App\Models\User;
 use App\Models\ProductReview;
 use App\Models\OrderItem;
 use App\Models\Product;
-use phpDocumentor\Reflection\Types\Null_;
+use App\Models\Category;
+
 
 class SellerController extends Controller
 {
@@ -20,30 +21,51 @@ class SellerController extends Controller
     public function store(Request $request){
         $request->validate([
             'store_name' => 'required|string|max:255|unique:seller_profiles,store_name',
-            'store_phone' => 'nullable|string|max:20',
-            'store_address' => 'nullable|string|max:255',   
-            'logo' => 'nullable|image|mimes:jpg,jpeg,png|max:1024',
-            'banner' => 'nullable|image|mimes:jpg,jpeg,png|max:2048',
-            'province' => 'nullable|string|max:50',
-            'city' => 'nullable|string|max:50',
-            'address'=> 'nullable|string|max:50',
-            'phone' => 'nullable|string|max:50',
+            'store_phone' => 'required|string|max:20',
+            'store_address' => 'required|string|max:255',   
+            'logo' => 'required|image|mimes:jpg,jpeg,png|max:1024',
+            'banner' => 'required|image|mimes:jpg,jpeg,png|max:2048',
+            'province' => 'required|string|max:50',
+            'city' => 'required|string|max:50',
+            'address'=> 'required|string|max:50',
+            'store_description' => 'nullable|string|max:2000',
+            'open_time' => 'nullable|date_format:H:i',
+            'close_time' => 'nullable|date_format:H:i',
         ]);
 
         /** @var \App\Models\User $user */
         $user = Auth::user();
 
+        $data  = [
+            'user_id' => $user->id,
+            'store_name' => $request->input('store_name'),
+            'store_phone' => $request->input('store_phone') ?? $request->input('phone'),
+            'store_address' => $request->input('store_address') ?? $request->input('address'),
+            'province' => $request->input('province'),
+            'city' => $request->input('city'),
+            'description' => $request->input('store_description'),
+            'open_time' => $request->input('open_time'),
+            'close_time' => $request->input('close_time'),
+        ];
+        if($request->hasFile('logo')){
+            $data['logo'] = $request->file('logo')->store('store_logos', 'public');
+        }
+        if($request->hasFile('banner')){
+            $data['banner'] = $request->file('banner')->store('store_banners', 'public');
+        }
         if(!$user->is_seller) {
-            $user->save(['is_seller' => true]);
-            $user->update(['role' => 'seller']);
-            SellerStore::create([
-                'user_id' => $user->id,
-                'store_name' => $request->store_name,
-                'store_phone' => $request->store_phone,
-                'store_address' => $request->store_address, 
-            ]);
+            $user->update(['role' => 'seller', 'is_seller' => true]);
+            SellerStore::create($data);
             return redirect()->route('seller.dashboard')->with('message', 'Selamat! Toko and berhasil dibuat.');
         }
+
+        $sellerstore = $user->sellerStore;
+        if($sellerstore){
+            $sellerstore->update($data);
+            return redirect()->route('seller.dashboard')->with('message', 'Berhasil memperbarui informasi toko.');
+        }
+
+        return back()->withErrors(['store' => 'Tidak dapat membuat atau memperbarui toko. Silakan coba lagi.']);
     }
 
     public function viewReecentOrder(){
@@ -71,10 +93,14 @@ class SellerController extends Controller
         return view('', compact('product'));
     }
 
+    public function viewAddProductForm(){
+        $categories = Category::all();
+        return view('seller.add-new-product', compact('categories'));
+    }
     public function addProduct(Request $request){
         $seller = auth()->user()->sellerStore;
         $request->validate([
-            'name' => 'required|string|max:255',
+            'product_name' => 'required|string|max:255',
             'category_id' => 'required|exists:categories,id',
             'brand' => 'nullable|string|max:100',
             'description' => 'nullable|string|max:5000',

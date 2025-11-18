@@ -36,7 +36,8 @@ Route::middleware(['auth','ensure.seller'])->group(function(){
     Route::get('/seller/analytics', [SellerController::class, 'viewAnalyticsReview']);
     Route::get('/seller/inbox', [SellerController::class, 'viewReviewProduct']);
     Route::delete('/seller/remove/product/{id}', [SellerController::class, 'deleteProd']);
-    Route::post('/seller/add/product/{id}', [SellerController::class,'addProduct']);
+    Route::post('/seller/add/product', [SellerController::class,'addProduct'])->name('seller.add.product');
+    Route::get('/seller/add/product', [SellerController::class,'viewAddProductForm'])->name('seller.view.add.product');
     Route::post('/seller/update/product/{id}', [SellerController::class, '']);
     Route::post('/seller/update/status', [SellerController::class, 'updateStatus']);
     Route::get('/seller/recent-order', [SellerController::class,'viewReecentOrder']);
