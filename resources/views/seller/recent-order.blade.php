@@ -110,7 +110,7 @@
                 </tr>
               </thead>
               <tbody id="ordersBody">
-                @php {{ $i=0 }} @endphp
+                @php $i = 0; @endphp
                 @forelse ($orders as $order)
                 <tr>
                   <th scope='row'>#{{ $order->id}}</th>
@@ -121,7 +121,7 @@
                   <td>{{ $order->item->price }}</td>
                   <td>{{ $order->order_date }}</td>    
                   <td><button class="btn btn-primary btn-sm btn-update me-2" data-bs-toggle="modal" data-bs-target="#orderUpdateModal">Update</button></td>
-                  @php {{ $i++ }} @endphp
+                  @php $i++ @endphp
                 </tr>
                 <tr>
                   @empty

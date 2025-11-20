@@ -42,6 +42,7 @@ Route::middleware(['auth','ensure.seller'])->group(function(){
     Route::post('/seller/update/status', [SellerController::class, 'updateStatus']);
     Route::get('/seller/recent-order', [SellerController::class,'viewReecentOrder']);
 
+
 });
 
 
@@ -52,3 +53,6 @@ Route::middleware(['auth:web', 'ensure.admin'])->group(function(){
 
 
 require __DIR__.'/auth.php';
+
+    //Route::post('/orders/{order}/ship', [OrderController::class, 'ship'])
+    //->middleware('auth', 'can:ship,order');

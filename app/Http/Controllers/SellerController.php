@@ -68,6 +68,7 @@ class SellerController extends Controller
         
         return view('seller.dashboard', compact('total_order', 'monthly_revenue', 'activeProducts', 'storeRating', 'labels', 'data'));
     }
+
     public function store(Request $request){
         $request->validate([
             'store_name' => 'required|string|max:255|unique:seller_profiles,store_name',
@@ -127,6 +128,32 @@ class SellerController extends Controller
         ->paginate(10);
         return view('seller.recent-order', compact('orders'));
     }
+
+    public function generateTracking(Order $order, $courier){
+        // contoh sederhana: gabungkan ID order dengan kode kurir dan timestamp acak
+        return strtoupper($courier) . '-' . $order->id . '-' . strtoupper(Str::random(6));
+    }
+
+    public function estimateArrival($courier){
+        $courier_data = Shipping::where('id', $courier)->first();
+        $minDays = ;
+        $maxDays = 7;
+        return now()->addDays(rand($minDays, $maxDays));
+    }
+
+    public function ship(Request $request, Order $order){
+        $this->authorize('ship', $order); // akan pakai OrderPolicy@ship
+
+        $order->shipping_date = now();
+        $order->tracking_number = $this->generateTracking($order, $request->courier);
+        $order->courier = $request->courier;
+        $order->estimated_arrival = $this->estimateArrival($request->courier);
+        $order->status = 'shipped';
+        $order->save();
+        // notify customer, create shipment log, dll.
+        return back()->with('success', 'Order marked as shipped.');
+    }
+
 
     public function updateStatus(Request $request, $id){
         $request->validate(['status'=> 'required|string']);
