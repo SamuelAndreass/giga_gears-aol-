@@ -19,10 +19,14 @@ return new class extends Migration
             $table->decimal('per_kg', 10, 2)->default(0);
             $table->unsignedTinyInteger('min_delivery_days')->nullable();
             $table->unsignedTinyInteger('max_delivery_days')->nullable();
-            $table->string('coverage');
+            $table->string('coverage')->nullable();
             $table->enum('status', ['active', 'inactive'])->default('active');
-            $table->string('logo')->nullable();
             $table->timestamps();
+            $table->string('tracking_number')->unique()->nullable();
+            $table->date('shipping_date')->nullable();
+            $table->date('estimated_arrival_date')->nullable();
+            $table->foreignId('order_id')->constrained()->onDelete('cascade');
+            $table->datetime('actual_arrival')->nullable();
         });
     }
 

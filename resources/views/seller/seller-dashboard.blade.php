@@ -49,7 +49,7 @@
         <div class="appbar px-3 px-md-4 py-3 mb-4 d-flex align-items-center justify-content-between">
           <div>
             <div class="small opacity-75 mb-1">Welcome back 👋</div>
-            <h1 class="wc-title mb-0">TechnoWorld</h1>
+            <h1 class="wc-title mb-0">@auth {{Auth::user()->name}} @endauth</h1>
           </div>
           <div class="d-flex gap-2">
             <span class="badge-chip d-inline-flex align-items-center gap-2"><i class="bi bi-bell"></i></span>
@@ -65,95 +65,69 @@
           <div class="col-12 col-md-6 col-xl-3">
             <div class="kpi">
               <span class="rounded-3 bg-primary-subtle text-primary d-inline-flex align-items-center justify-content-center" style="width:36px;height:36px"><i class="bi bi-bag"></i></span>
-              <div><div class="small text-muted-gg">Orders Today</div><div class="fs-4 fw-black">12</div></div>
+              <div><div class="small text-muted-gg">Total Orders</div><div class="fs-4 fw-black">{{ $total_order }}</div></div>
             </div>
           </div>
           <div class="col-12 col-md-6 col-xl-3">
             <div class="kpi">
               <span class="rounded-3 bg-primary-subtle text-primary d-inline-flex align-items-center justify-content-center" style="width:36px;height:36px"><i class="bi bi-piggy-bank"></i></span>
-              <div><div class="small text-muted-gg">Monthly Revenue</div><div class="fs-4 fw-black">$2,430</div></div>
+              <div><div class="small text-muted-gg">Monthly Revenue</div><div class="fs-4 fw-black"{{ number_format($monthly_revenue) }}</div></div>
             </div>
           </div>
           <div class="col-12 col-md-6 col-xl-3">
             <div class="kpi">
               <span class="rounded-3 bg-primary-subtle text-primary d-inline-flex align-items-center justify-content-center" style="width:36px;height:36px"><i class="bi bi-box-seam"></i></span>
-              <div><div class="small text-muted-gg">Active Products</div><div class="fs-4 fw-black">34</div></div>
+              <div><div class="small text-muted-gg">Active Products</div><div class="fs-4 fw-black">{{$activeProducts}}</div></div>
             </div>
           </div>
           <div class="col-12 col-md-6 col-xl-3">
             <div class="kpi">
               <span class="rounded-3 bg-primary-subtle text-primary d-inline-flex align-items-center justify-content-center" style="width:36px;height:36px"><i class="bi bi-star"></i></span>
-              <div><div class="small text-muted-gg">Store Rating</div><div class="fs-4 fw-black">4.7</div></div>
+              <div><div class="small text-muted-gg">Store Rating</div><div class="fs-4 fw-black">{{ $storeRating }}</div></div>
             </div>
           </div>
         </div>
 
-        <!-- Chart & Recent -->
+        <!-- Chart -->
         <div class="row g-3">
-          <div class="col-12 col-xl-8">
+          <div class="col-12 col-xl">
             <section class="gg-card p-3 p-md-4">
               <div class="d-flex justify-content-between align-items-center mb-2">
                 <h5 class="mb-0">Sales Chart</h5>
-                <button class="btn btn-sm btn-outline-secondary">This Year</button>
+                <div class="badge rounded-pill bg-light text-primary border border-primary px-3 py-2">This Year</div>
               </div>
-              <div class="text-muted-gg">Hubungkan ke backend/Chart.js untuk grafik dinamis.</div>
-              <div class="mt-4" style="height:300px;background:linear-gradient(180deg,#f7faff,#fff);border:1px dashed #e1e7f8;border-radius:12px"></div>
-            </section>
-          </div>
-
-          <div class="col-12 col-xl-4">
-            <section class="gg-card p-3 p-md-4">
-              <div class="d-flex justify-content-between align-items-center mb-2">
-                <h5 class="mb-0">Recent Order</h5>
-                <a href="#" class="small text-decoration-none">Full Detail</a>
-              </div>
-
-              <div class="table-responsive">
-                <table class="table gg-table mb-0">
-                  <thead>
-                    <tr>
-                      <th>Order ID</th>
-                      <th>Product</th>
-                      <th>Customer</th>
-                      <th>Status</th>
-                      <th>Total</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    <tr>
-                      <td>#10231</td>
-                      <td>Logitech G Pro X</td>
-                      <td>John Doe</td>
-                      <!-- gunakan komponen status yang konsisten -->
-                      <td><span class="badge-status completed">Completed</span></td>
-                      <td>$99</td>
-                    </tr>
-                    <tr>
-                      <td>#10230</td>
-                      <td>Logitech G Pro X</td>
-                      <td>John Doe</td>
-                      <td><span class="badge-status completed">Completed</span></td>
-                      <td>$99</td>
-                    </tr>
-                    <tr>
-                      <td>#10229</td>
-                      <td>Logitech G Pro X</td>
-                      <td>John Doe</td>
-                      <td><span class="badge-status completed">Completed</span></td>
-                      <td>$99</td>
-                    </tr>
-                  </tbody>
-                </table>
+              <div class="mt-4" style="height:300px;background:linear-gradient(180deg,#f7faff,#fff);border:1px dashed #e1e7f8;border-radius:12px">
+                 <canvas id="salesChart"></canvas>
               </div>
             </section>
           </div>
         </div>
-
         <p class="text-center mt-4 foot small mb-0">© 2025 GigaGears. All rights reserved.</p>
       </main>
     </div>
   </div>
 
   <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+  <script>
+    const ctx = document.getElementById('salesChart').getContext('2d');
+
+    new Chart(ctx, {
+        type: 'line',
+        data: {
+            labels: @json($labels),
+            datasets: [{
+                label: "Revenue",
+                data: @json($data),
+                borderWidth: 2,
+                tension: 0.3
+            }]
+        },
+        options: {
+            scales: {
+                y: { beginAtZero: true }
+            }
+        }
+    });
+  </script>
 </body>
 </html>

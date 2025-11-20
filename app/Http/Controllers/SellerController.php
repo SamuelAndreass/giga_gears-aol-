@@ -18,9 +18,55 @@ use Illuminate\Support\Facades\Validator;
 class SellerController extends Controller
 {
     public function viewMainDashboard(){
-        $total_order = 
-        $monthly_revenue = OrderItem::whereHas('order', fn($q) => $q->whereMonth('order_date', now()->month())->where('status', 'paid'));
-        return view('seller.dashboard');
+        $user = Auth::user()->sellerStore;
+        $id = $user->id;
+        $total_order = DB::table('Order_Items as oi')
+            ->join('Product as p', 'oi.ProductCode', '=', 'p.Code')
+            ->where('p.StoreID', $storeId)
+            ->distinct('oi.OrdersID')
+            ->count('oi.OrdersID');
+        
+        $monthly_revenue = $monthlyRevenue = DB::table('Order_Items as oi')
+            ->join('Product as p', 'oi.ProductCode', '=', 'p.Code')
+            ->join('Orders as o', 'oi.OrdersID', '=', 'o.ID')
+            ->where('p.StoreID', $storeId)
+            ->whereMonth('o.OrderDate', $now->month)
+            ->whereYear('o.OrderDate', $now->year)
+            ->selectRaw('COALESCE(SUM(oi.Price * oi.Qty), 0) as revenue')
+            ->value('revenue');;
+
+        $activeProducts = DB::table('Product')
+            ->where('StoreID', $storeId)
+            ->where('QtyInStock', '>', 0)
+            ->count();
+        
+        $storeRating = DB::table('Store_Rating')
+            ->where('StoreID', $storeId)
+            ->avg('Rating');
+        $storeRating = $storeRating ? number_format($storeRating, 1) : 0;
+        $sales = DB::table('Order_Items as oi')
+            ->join('Product as p', 'oi.ProductCode', '=', 'p.Code')
+            ->join('Orders as o', 'oi.OrdersID', '=', 'o.ID')
+            ->where('p.StoreID', $storeId)
+            ->selectRaw('
+                MONTH(o.OrderDate) as month,
+                YEAR(o.OrderDate) as year,
+                SUM(oi.Price * oi.Qty) as revenue
+            ')
+            ->groupBy('year', 'month')
+            ->orderBy('year')
+            ->orderBy('month')
+            ->get();
+
+        // convert to format chart.js
+        $labels = [];
+        $data = [];
+        foreach ($sales as $row) {
+            $labels[] = date("M Y", strtotime("$row->year-$row->month-01")); // contoh: Jan 2025
+            $data[] = $row->revenue;
+        }
+        
+        return view('seller.dashboard', compact('total_order', 'monthly_revenue', 'activeProducts', 'storeRating', 'labels', 'data'));
     }
     public function store(Request $request){
         $request->validate([
@@ -74,12 +120,12 @@ class SellerController extends Controller
 
     public function viewReecentOrder(){
         $seller = auth()->user()->sellerStore;
-        $orders  = Order::whereHas('item.product', function($q) use ($seller){
+        $orders  = Order::whereHas('items.product', function($q) use ($seller){
             $q->where('seller_store', $seller->id);
         })->with(['items.product', 'user'])
         ->latest('order_date')
         ->paginate(10);
-        return view('', compact('orders'));
+        return view('seller.recent-order', compact('orders'));
     }
 
     public function updateStatus(Request $request, $id){
@@ -101,6 +147,7 @@ class SellerController extends Controller
         $shippings = Shipping::all();
         return view('seller.add-new-product', compact('categories', 'shippings'));
     }
+
     public function addProduct(Request $request){
         $seller = auth()->user()->sellerStore;
         $rules = [
@@ -243,7 +290,7 @@ class SellerController extends Controller
         ]);
 
         return redirect()->back()->with('message', 'Berhasil menambahkan product');
-}
+    }
 
     public function deleteProd(Product $product){
          $seller = auth()->user()->sellerStore;

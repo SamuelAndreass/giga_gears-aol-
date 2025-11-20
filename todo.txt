@@ -5,3 +5,4 @@
 [] Create customer page (home page, cart and order logic [v])
 [] Create payment
 
+[] edit navbar di seller page (tujuan pagenya, sama profile)

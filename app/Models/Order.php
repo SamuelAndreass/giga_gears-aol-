@@ -9,7 +9,7 @@ class Order extends Model
     //
     protected $fillable = ['user_id','order_date', 'total_amount', 'status'];
 
-    public function item(){
+    public function items(){
         return $this->hasmany(OrderItem::class);
     }
 
