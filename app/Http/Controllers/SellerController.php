@@ -11,11 +11,15 @@ use App\Models\ProductReview;
 use App\Models\OrderItem;
 use App\Models\Product;
 use App\Models\Category;
+use App\Models\Shipping;
+use Illuminate\Support\Facades\Validator;
 
 
 class SellerController extends Controller
 {
     public function viewMainDashboard(){
+        $total_order = 
+        $monthly_revenue = OrderItem::whereHas('order', fn($q) => $q->whereMonth('order_date', now()->month())->where('status', 'paid'));
         return view('seller.dashboard');
     }
     public function store(Request $request){
@@ -78,7 +82,6 @@ class SellerController extends Controller
         return view('', compact('orders'));
     }
 
-
     public function updateStatus(Request $request, $id){
         $request->validate(['status'=> 'required|string']);
         $order = Order::findOrFail($id);
@@ -95,49 +98,152 @@ class SellerController extends Controller
 
     public function viewAddProductForm(){
         $categories = Category::all();
-        return view('seller.add-new-product', compact('categories'));
+        $shippings = Shipping::all();
+        return view('seller.add-new-product', compact('categories', 'shippings'));
     }
     public function addProduct(Request $request){
         $seller = auth()->user()->sellerStore;
-        $request->validate([
+        $rules = [
             'product_name' => 'required|string|max:255',
-            'category_id' => 'required|exists:categories,id',
-            'brand' => 'nullable|string|max:100',
-            'description' => 'nullable|string|max:5000',
-            'price' => 'required|numeric|min:0',
-            'discount' => [
-                        'nullable',
-                        'numeric',
-                        'min:0',
-                        'max:100',
-                            function($attribute, $value, $fail) use ($request) {
-                                if ($value && $value > 0 && $request->price <= 0) {
-                                    $fail('Diskon tidak bisa diterapkan tanpa harga produk.');
-                                }
-                            }
-                        ],
+            'category_id'  => 'required|exists:categories,id',
+            'brand'        => 'required|string|max:100',
+            'description'  => 'nullable|string|max:5000',
+            'price'        => 'required|numeric|min:0',
+            'PSKU'         => 'nullable|string|max:100',
+            'discount'     => [
+                'nullable',
+                'numeric',
+                'min:0',
+                'max:100',
+                function($attribute, $value, $fail) use ($request) {
+                    if ($value && $value > 0 && ($request->price === null || $request->price <= 0)) {
+                        $fail('Diskon tidak bisa diterapkan tanpa harga produk.');
+                    }
+                }
+            ],
             'qty' => 'required|integer|min:1',
             'color' => 'nullable|string|max:50',
             'image' => 'required|image|mimes:jpg,jpeg,png,webp|max:2048',
-        ]);
+            'video' => 'nullable|mimes:mp4,mov,avi,wmv|max:200000',
+            'weight' => 'nullable|integer|min:0',
+            'diameter' => 'nullable|numeric|min:0',
+            'variants' => 'nullable|array',
+            'variants.*.color' => 'nullable|string|max:100',
+            'variants.*.size'  => 'nullable|string|max:50',
+            'variants.*.price' => 'nullable|numeric|min:0',
+            'variants.*.stock' => 'nullable|integer|min:0',
+        ];
+
+        $validator = Validator::make($request->all(), $rules);
+
+
+        $validator->after(function ($v) use ($request) {
+            $variants = $request->input('variants', []);
+            $seen = [];
+
+            foreach ($variants as $i => $row) {
+                $color = isset($row['color']) ? trim($row['color']) : '';
+                $size  = isset($row['size'])  ? trim($row['size'])  : '';
+                $price = $row['price'] ?? null;
+                $stock = $row['stock'] ?? null;
+
+                // skip completely empty rows
+                if ($color === '' && $size === '' && ($price === null || $price === '')) {
+                    continue;
+                }
+
+                // if row used, color & size required
+                if ($color === '' || $size === '') {
+                    $v->errors()->add("variants.$i.color", "Kolom warna dan ukuran harus diisi jika baris variant dipakai.");
+                }
+
+                // check duplicate combination color+size
+                $key = strtolower($color) . '||' . strtolower($size);
+                if (!empty($color) && !empty($size)) {
+                    if (isset($seen[$key])) {
+                        $v->errors()->add("variants.$i.size", "Kombinasi warna & ukuran duplikat dengan baris #{$seen[$key]}.");
+                    } else {
+                        $seen[$key] = $i + 1;
+                    }
+                }
+
+                // price numeric check (defensive)
+                if (!is_null($price) && $price !== '' && !is_numeric($price)) {
+                    $v->errors()->add("variants.$i.price", "Harga variant harus berupa angka.");
+                }
+            }
+        });
+
+        if ($validator->fails()) {
+            return back()->withErrors($validator)->withInput();
+        }
+
         $imagePath = null;
-        if($request->hasFile('image')){
+        $videoPath = null;
+
+        if ($request->hasFile('image')) {
             $imagePath = $request->file('image')->store('products', 'public');
         }
-        Product::create([
-            'name' => $request->name,
-            'category_id' => $request->category_id,
-            'seller_store_id'  => $seller->id,
-            'brand' => $request->brand,
-            'price' => $request->price,
-            'qty' => $request->qty,
-            'description' => $request->description,
-            'discount' => $request->discount,
-            'color'  => $request->color,
-            'images'  => $imagePath,
+
+        if ($request->hasFile('video')) {
+            $videoPath = $request->file('video')->store('videos', 'public');
+        }
+
+
+        $sku = $request->input('PSKU');
+        if (!$sku) {
+
+            $sku = 'GG-S' . ($seller->id ?? '0') . '-' . time() . '-' . strtoupper(Str::random(4));
+        } else {
+            $orig = $sku;
+            $i = 1;
+            while (Product::where('sku', $sku)->exists()) {
+                $sku = $orig . '-' . $i++;
+            }
+        }
+
+        // normalize variants: buang baris kosong dan cast tipe
+        $variantsRaw = $request->input('variants', []);
+        $normalizedVariants = [];
+        foreach ($variantsRaw as $row) {
+            $color = isset($row['color']) ? trim($row['color']) : '';
+            $size  = isset($row['size'])  ? trim($row['size'])  : '';
+            $priceVar = $row['price'] ?? null;
+            $stockVar = $row['stock'] ?? null;
+
+            if ($color === '' && $size === '' && ($priceVar === null || $priceVar === '')) {
+                continue;
+            }
+
+            $normalizedVariants[] = [
+                'color' => $color,
+                'size'  => $size,
+                'price' => $priceVar !== null && $priceVar !== '' ? floatval($priceVar) : null,
+                'stock' => $stockVar !== null && $stockVar !== '' ? intval($stockVar) : null,
+            ];
+        }
+
+        // create product
+        $product = Product::create([
+            'name' => $request->input('product_name'),
+            'category_id' => $request->input('category_id'),
+            'seller_store_id' => $seller->id,
+            'brand' => $request->input('brand'),
+            'price' => $request->input('price'),
+            'qty' => $request->input('qty'),
+            'description' => $request->input('description'),
+            'discount' => $request->input('discount') ?? 0,
+            'color' => $request->input('color'),
+            'images' => $imagePath,
+            'sku' => $sku,
+            'video' => $videoPath,
+            'weight' => $request->input('weight'),
+            'diameter' => $request->input('diameter'),
+            'variants' => $normalizedVariants,
         ]);
-        return back()->with('message', 'Berhasil menambahkan product');
-    }
+
+        return redirect()->back()->with('message', 'Berhasil menambahkan product');
+}
 
     public function deleteProd(Product $product){
          $seller = auth()->user()->sellerStore;

@@ -64,6 +64,9 @@ class DatabaseSeeder extends Seeder
                     'store_name' => 'Test Store',
                     'store_phone' => '081234567890',
                     'store_address' => 'Jl. Contoh No. 123, Jakarta',
+                    'verified_by' => 3,
+                    'status' => 'active',
+                    'verified_at' => now(),
                 ]);
             }
         }

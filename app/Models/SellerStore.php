@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use App\Models\Shipping;
 class SellerStore extends Model
 {
     //
@@ -17,13 +18,11 @@ class SellerStore extends Model
 
     public function reviews()  { return $this->hasMany(StoreReview::class);}
 
-    protected static function boot() {
-        parent::boot();
-        static::creating(function ($order) {
-            $last = self::latest('id')->first();
-            $next = $last ? $last->id + 1 : 1;
-            $order->store_code = 'STR-' . str_pad($next, 4, '0', STR_PAD_LEFT);
-        });
+
+    public function shippings(){
+        return $this->belongsToMany(Shipping::class, 'seller_courier')
+                    ->withPivot(['enabled','extra_fee','settings'])
+                    ->withTimestamps();
     }
 
     public function approve($adminId){

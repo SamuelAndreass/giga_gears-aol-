@@ -25,7 +25,7 @@
         </a>
 
         <nav class="nav flex-column nav-gg">
-          <a class="nav-link" href="#"><i class="bi bi-grid-1x2"></i>Dashboard</a>
+          <a class="nav-link" href="{{ route('seller.index') }}"><i class="bi bi-grid-1x2"></i>Dashboard</a>
           <a class="nav-link" href="#"><i class="bi bi-bag"></i>Order</a>
           <a class="nav-link active" href="#"><i class="bi bi-box"></i>Products</a>
           <a class="nav-link" href="#"><i class="bi bi-wallet2"></i>Balance & Withdraw</a>
@@ -87,13 +87,22 @@
                 @enderror
               </div>
               <div class="col-md-6">
-                <input id="pBrand" class="form-control" type="text" placeholder="Brand">
+                <input id="pBrand" name="brand" class="form-control @error('brand') is-invalid @enderror" type="text" placeholder="Brand" required>
+                @error('brand')
+                  <div class="invalid-feedback">{{ $message }}</div>
+                @enderror
               </div>
               <div class="col-md-6">
-                <input id="pSku" class="form-control" type="text" placeholder="SKU / Product Code (optional)">
+                <input id="pSku" class="form-control @error('PSKU') is-invalid @enderror" type="text" placeholder="SKU / Product Code (optional)">
+                @error('PSKU')
+                  <div class="invalid-feedback">{{ $message }}</div>
+                @enderror
               </div>
               <div class="col-12">
-                <textarea id="pDesc" class="form-control" rows="3" placeholder="Product Description"></textarea>
+                <textarea id="pDesc" name="description" class="form-control @error('description') is-invalid @enderror" rows="3" placeholder="Product Description"></textarea>
+                @error('description')
+                  <div class="invalid-feedback">{{ $message }}</div>
+                @enderror
               </div>
             </div>
           </section>
@@ -105,10 +114,17 @@
               <div class="col-md-6">
                 <div class="input-group">
                   <span class="input-group-text">$</span>
-                  <input id="pPrice" class="form-control" type="number" min="0" step="0.01" placeholder="Price" required>
+                  <input id="pPrice" name="price" class="form-control @error('price') is-invalid @enderror" type="number" min="0" step="0.01" placeholder="Price" required>
+                  @error('price')
+                    <div class="invalid-feedback">{{ $message }}</div>
+                  @enderror
                 </div>
+              </div>
               <div class="col-md-6">
-                <input id="pStock" class="form-control" type="number" min="0" step="1" placeholder="Stock Quantity">
+                <input id="pStock" name="qty" class="form-control @error('qty') is-invalid @enderror" type="number" min="0" step="1" placeholder="Stock Quantity" required>
+                @error('qty')
+                  <div class="invalid-feedback">{{ $message }}</div>
+                @enderror
               </div>
             </div>
           </section>
@@ -118,13 +134,27 @@
             <h6 class="mb-3">C. Media Upload</h6>
             <div class="row g-3">
               <div class="col-md-8">
-                <input id="pImages" class="form-control" type="file" accept="image/*" multiple>
-                <div class="small text-muted mt-1">Upload Product Images (max 5)</div>
-                <div id="imgPreview" class="d-flex gap-2 flex-wrap mt-2"></div>
-              </div>
+                <input id="pImages" class="form-control" name="image" @error('image') is-invalid @enderror" type="file" accept="image/*" multiple>
+                <div class="small text-muted mt-1">Upload Product Images (max 3 MB)</div>
+                @error('image')
+                  <div class="text-danger small">{{ $message }}</div>
+                @enderror
+                 <!-- Modal preview -->
+                <div id="imgPreview" name="image" class="d-flex gap-2 flex-wrap mt-2"></div>
+                  <div class="modal fade" id="imgModal" tabindex="-1" aria-hidden="true">
+                    <div class="modal-dialog modal-dialog-centered modal-lg">
+                      <div class="modal-content bg-transparent border-0">
+                        <img id="modalImg" class="img-fluid rounded">
+                      </div>
+                    </div>
+                  </div>
+                </div>
               <div class="col-md-4">
-                <input id="pVideo" class="form-control" type="url" placeholder="Video URL (e.g. demo product)">
-                <div class="small text-muted mt-1">Opsional: YouTube/drive link.</div>
+                <input id="pVideo" name="video" class="form-control @error('image') is-invalid @enderror" type="file" accept="video/*" placeholder="Video URL (e.g. demo product)">
+                <div class="small text-muted mt-1">Opsional: Upload video product.</div>
+                @error('video')
+                  <div class="invalid-feedback">{{ $message }}</div> 
+                @enderror
               </div>
             </div>
           </section>
@@ -143,32 +173,19 @@
 
           <!-- E. Shipping (Physical only) -->
           <section class="gg-card p-3 p-md-4">
-            <h6 class="mb-3">E. Shipping (Only for Physical Products)</h6>
+            <h6 class="mb-3">E. Other Information (only for physical products)</h6>
             <div class="row g-3">
               <div class="col-md-4">
-                <input id="pWeight" class="form-control" type="number" min="0" step="1" placeholder="Weight (grams)">
+                <input id="pWeight" name="weight" class="form-control @error('weight') is-invalid @enderror" type="number" min="0" step="1" placeholder="Weight (grams)">
+                @error('weight')
+                  <div class="invalid-feedback">{{ $message }}</div>
+                @enderror
               </div>
               <div class="col-md-8">
-                <input id="pDims" class="form-control" type="text" placeholder="Dimensions (cm) — e.g. 20 x 12 x 8">
-              </div>
-            </div>
-          </section>
-
-          <!-- F. Shipping Option -->
-          <section class="gg-card p-3 p-md-4">
-            <div class="d-flex justify-content-between align-items-center mb-3">
-              <h6 class="mb-0">F. Shipping Option</h6>
-              <button type="button" id="btnAddCourier" class="btn btn-outline-secondary btn-sm">
-                <i class="bi bi-plus-lg me-1"></i>Add Others
-              </button>
-            </div>
-            <div id="couriersWrap" class="row g-2">
-              <div class="col-md-4">
-                <div class="input-group">
-                  <span class="input-group-text"><i class="bi bi-truck"></i></span>
-                  <input class="form-control" type="text" value="JNE">
-                  <span class="input-group-text"><input class="form-check-input mt-0" type="checkbox" checked></span>
-                </div>
+                <input id="pDims" name="diameter" class="form-control @error('diameter') is-invalid @enderror" type="text" placeholder="Dimensions (cm) — e.g. 20 x 12 x 8">
+                @error('diameter')
+                  <div class="invalid-feedback">{{ $message }}</div>
+                @enderror
               </div>
             </div>
           </section>
@@ -194,27 +211,40 @@
   <script>
     document.addEventListener('DOMContentLoaded', () => {
       // image preview
-      const imagesInput = document.getElementById('imagesInput');
-      const previewBox = document.getElementById('previewImages');
+      const imagesInput = document.getElementById('pImages');
+      const previewBox = document.getElementById('imgPreview');
+      const modalImg = document.getElementById('modalImg');
+      const bsModal = new bootstrap.Modal(document.getElementById('imgModal'));
 
       imagesInput?.addEventListener('change', (e) => {
         previewBox.innerHTML = '';
-        const files = Array.from(e.target.files).slice(0, 8); // limit preview to first 8
+
+        const files = Array.from(e.target.files);
+
         files.forEach(file => {
           const reader = new FileReader();
           reader.onload = (ev) => {
             const img = document.createElement('img');
             img.src = ev.target.result;
-            img.style = "width:120px;height:120px;object-fit:cover;border-radius:6px;border:1px solid #ddd";
+            img.className = "rounded border";
+            img.style = "width:120px;height:120px;object-fit:cover;cursor:pointer";
+
+            // Klik untuk menampilkan modal
+            img.addEventListener('click', () => {
+              modalImg.src = ev.target.result;
+              bsModal.show();
+            });
+
             previewBox.appendChild(img);
           };
           reader.readAsDataURL(file);
         });
       });
 
+
       // dynamic variants
-      const variantsWrapper = document.getElementById('variantsWrapper');
-      const addVariantBtn = document.getElementById('addVariantBtn');
+      const variantsWrapper = document.getElementById('variantsWrap');
+      const addVariantBtn = document.getElementById('btnAddVariant');
       let variantIndex = variantsWrapper.querySelectorAll('.variant-row').length || 0;
 
       function makeVariantRow(i, data = {}) {

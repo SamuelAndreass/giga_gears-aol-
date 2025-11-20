@@ -32,5 +32,4 @@ class Shipping extends Model
     public function setServiceTypeAttribute($value){
         $this->attributes['service_type'] = ucwords(strtolower($value));
     }
-
 }

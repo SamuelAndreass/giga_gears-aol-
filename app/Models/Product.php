@@ -10,9 +10,9 @@ class Product extends Model
     use HasFactory;
     protected $fillable = [
         'name', 'description', 'category_id', 'original_price', 'discount_price',
-        'discount_percentage', 'images', 'colors', 'specifications', 'features',
+        'discount_percentage', 'images', 'specifications', 'features',
         'stock', 'brand', 'rating', 'review_count', 'is_featured', 'status',
-        'verified_at', 'verified_by'
+        'verified_at', 'verified_by', 'variants', 'seller_store_id', 'sku', 'weight', 'diameter'
     ];
     protected $casts = [
         'images' => 'array', 'colors' => 'array', 'specifications' => 'array',
@@ -25,6 +25,7 @@ class Product extends Model
     public function CartItems(){ return $this->hasMany(CartItem::class);}
     public function sellerStore(){ return $this->belongsTo(SellerStore::class);}
 
+    
     public function verifiedBy(){ return $this->belongsTo(User::class, 'verified_by'); }
     protected static function boot() {
         parent::boot();

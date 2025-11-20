@@ -1,0 +1,7 @@
+[] Create login and signup (signup left)
+[v] configure routing, role restriction for any user
+[] Create admin page (crud customer, seler, product, discount, analytics)
+[] Create seller page (dashboard, product[v], analytics, inbox, order, store setup [v])
+[] Create customer page (home page, cart and order logic [v])
+[] Create payment
+
