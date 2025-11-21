@@ -41,7 +41,7 @@ Route::middleware(['auth','ensure.seller'])->group(function(){
     Route::post('/seller/update/product/{id}', [SellerController::class, '']);
     Route::post('/seller/update/status', [SellerController::class, 'updateStatus']);
     Route::get('/seller/recent-order', [SellerController::class,'viewReecentOrder']);
-
+    Route::get('seller/recent-order', [SellerController::class,'search'])->name('seller.recent.order');
 
 });
 

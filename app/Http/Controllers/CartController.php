@@ -10,7 +10,7 @@ use Illuminate\Support\Facades\DB;
 
 class CartController extends Controller
 {
-    //
+   //
     public function index(){
         $cart = Cart::with('items.product')
         ->where('user_id', auth()->id())

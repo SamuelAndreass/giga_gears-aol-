@@ -3,242 +3,124 @@
 namespace App\Http\Livewire\Seller;
 
 use Livewire\Component;
-use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Auth;
 use App\Models\Order;
-use App\Models\Shipping;
+use App\Models\ShippingService;
+use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
 use Carbon\Carbon;
 
 class ShipOrder extends Component
 {
     public Order $order;
 
-    // courier slug (jne/jnt/sicepat/store)
+    public $couriers = [];
     public $courier;
-
-    // list services for selected courier
-    public $services = [];
-
-    // selected service id
-    public $selectedServiceId;
-
-    // preview / editable tracking number
     public $tracking_number;
-
-    // computed fields
     public $shipping_date;
-    public $eta_start; // date string
-    public $eta_end;   // date string
-    public $eta_text;  // "2 - 4 hari" or "01-04-2025 — 03-04-2025"
+    public $eta_start;
+    public $eta_end;
+    public $eta_text;
     public $shipping_cost;
-    public $notes;
-    public $shippers = [];
+
     protected $rules = [
-        'shipper' => 'required|string|max:50',
-        'selectedServiceId' => 'required|integer',
+        'courier' => 'required|string',
         'tracking_number' => 'nullable|string|max:120',
-        'notes' => 'nullable|string|max:1000',
     ];
 
     public function mount(Order $order)
     {
         $this->order = $order;
-        $this->authorizeShipOrAbort();
+        $this->authorize('ship', $order);
 
-        // load couriers dari DB
         $this->loadCouriers();
-
-        // init if order has existing shipping values
-        $this->courier = $order->courier;
-        $this->tracking_number = $order->tracking_number;
-        $this->shipping_date = $order->shipping_date?->toDateString();
-        if ($order->estimated_arrival) {
-            // if stored as single date, fill both
-            $this->eta_start = $order->estimated_arrival->toDateString();
-            $this->eta_end = $order->estimated_arrival->toDateString();
-            $this->eta_text = $this->eta_start;
-        }
-
-        // load services if courier already set
-        if ($this->courier) {
-            $this->loadServices();
-        }
-
-        // compute cost if service preselected
-        if ($this->selectedServiceId) {
-            $this->computeEstimatesFromService();
-        }
     }
 
-    protected function loadCouriers(){
-        // ambil (distinct) display name dari tabel shipping_services
-        $rows = Shipping::active()
-            ->select('name')
-            ->groupBy('name')
-            ->orderBy('name')
+    protected function loadCouriers()
+    {
+        $rows = ShippingService::active()
+            ->select('courier_name')
+            ->orderBy('courier_name')
             ->get();
 
-        // transform ke array yang mudah dipakai di blade
-        $this->shippers = $rows->map(fn($r) => [
+        $this->couriers = $rows->map(fn($r) => [
             'slug' => $r->courier_slug,
-            'name' => $r->courier_name ?? strtoupper($r->courier_slug),
-        ])->values()->all();
+            'name' => $r->courier_name,
+        ])->toArray();
     }
 
     public function updatedCourier($value)
     {
-        $this->authorizeShipOrAbort();
-        $this->selectedServiceId = null;
-        $this->services = [];
-        $this->eta_start = $this->eta_end = $this->eta_text = $this->shipping_cost = null;
-        $this->tracking_number = null; // preview will be generated when service chosen
+        $this->authorize('ship', $this->order);
 
-        if ($value) {
-            $this->loadServices();
-        }
-    }
+        $service = ShippingService::active()
+            ->where('courier_slug', $value)
+            ->first();
 
-    protected function loadServices()
-    {
-        // ambil services aktif untuk courier
-        $this->services = Shipping::active()
-            ->where('courier_slug', $this->courier)
-            ->orderBy('base_rate')
-            ->get()
-            ->map(function($s) {
-                return [
-                    'id' => $s->id,
-                    'name' => $s->name,
-                    'service_type' => $s->service_type,
-                    'base_rate' => (float)$s->base_rate,
-                    'per_kg' => (float)$s->per_kg,
-                    'min_delivery_days' => (int)$s->min_delivery_days,
-                    'max_delivery_days' => (int)$s->max_delivery_days,
-                    'coverage' => $s->coverage,
-                ];
-            });
-    }
-
-    public function updatedSelectedServiceId($value)
-    {
-        $this->authorizeShipOrAbort();
-        $this->computeEstimatesFromService();
-    }
-
-    protected function computeEstimatesFromService()
-    {
-        $service = collect($this->services)->firstWhere('id', (int)$this->selectedServiceId);
-        if (! $service) {
-            $this->eta_start = $this->eta_end = $this->eta_text = $this->shipping_cost = null;
+        if (!$service) {
+            $this->reset(['shipping_cost','eta_start','eta_end','eta_text','tracking_number']);
             return;
         }
 
-        // total berat order (misal: order->items->sum weight * qty)
-        $totalWeightKg = $this->order->items->sum(function($it){
-            // asumsi product punya weight_kg
-            return ($it->product->weight_kg ?? 0) * ($it->qty ?? 1);
-        });
+        // Hitung biaya
+        $weight = $this->order->items->sum(fn($it) =>
+            ($it->product->weight_kg ?? 0) * $it->qty
+        );
 
-        // Basic shipping cost: base + per_kg * weight
-        $cost = $service['base_rate'] + ($service['per_kg'] * max(0, $totalWeightKg));
+        $this->shipping_cost = $service->base_rate + ($service->per_kg * $weight);
 
-        // bisa tambahkan rule rounding / min fee dsb
-        $this->shipping_cost = round($cost, 0);
+        // Hitung ETA
+        $min = $service->min_delivery_days;
+        $max = $service->max_delivery_days;
 
-        // ETA range
-        $min = $service['min_delivery_days'];
-        $max = $service['max_delivery_days'];
+        $this->shipping_date = today()->toDateString();
+        $this->eta_start = today()->addDays($min)->toDateString();
+        $this->eta_end   = today()->addDays($max)->toDateString();
 
-        $start = Carbon::now()->addDays($min);
-        $end = Carbon::now()->addDays($max);
+        $this->eta_text = ($min == $max)
+            ? "{$min} hari (Tiba {$this->eta_start})"
+            : "{$min}-{$max} hari ({$this->eta_start} — {$this->eta_end})";
 
-        $this->shipping_date = Carbon::now()->toDateString();
-        $this->eta_start = $start->toDateString();
-        $this->eta_end = $end->toDateString();
-
-        // human readable
-        $this->eta_text = $min === $max
-            ? "{$min} hari ({$this->eta_start})"
-            : "{$min} - {$max} hari ({$this->eta_start} — {$this->eta_end})";
-
-        // generate preview tracking (non-final)
-        $this->tracking_number = $this->generateTrackingPreview($this->order, $this->courier);
-    }
-
-    protected function generateTrackingPreview(Order $order, string $courier)
-    {
-        $prefix = strtoupper(substr($courier, 0, 4));
-        $sellerId = Auth::id() ?? 'S';
-        return "{$prefix}-S{$sellerId}-O{$order->id}-" . now()->format('YmdHis');
+        // Generate tracking preview
+        $this->tracking_number = strtoupper(substr($value,0,4))
+            . "-S" . Auth::id()
+            . "-O" . $this->order->id
+            . "-" . now()->format('YmdHis');
     }
 
     public function ship()
     {
-        $this->authorizeShipOrAbort();
+        $this->authorize('ship', $this->order);
         $this->validate();
 
-        // find service from DB again (authoritative)
-        $service = Shipping::active()->find($this->selectedServiceId);
-        if (! $service) {
-            $this->addError('selectedServiceId', 'Service pengiriman tidak valid.');
-            return;
-        }
+        $service = ShippingService::active()
+            ->where('courier_slug', $this->courier)
+            ->firstOrFail();
 
         DB::transaction(function () use ($service) {
-            // final compute server-side
-            $totalWeightKg = $this->order->items->sum(function($it){
-                return ($it->product->weight_kg ?? 0) * ($it->qty ?? 1);
-            });
-
-            $finalTracking = $this->tracking_number ?: $this->generateTrackingPreview($this->order, $this->courier);
-            $finalCost = $service->base_rate + ($service->per_kg * max(0, $totalWeightKg));
-
-            $etaStart = now()->addDays($service->min_delivery_days);
-            $etaEnd = now()->addDays($service->max_delivery_days);
-
-            // Simpan di order (Mode C: simpan di orders)
             $this->order->update([
-                'shipping_date' => now(),
-                'tracking_number' => $finalTracking,
-                'tracking_source' => $this->tracking_number ? 'seller' : 'system',
                 'courier' => $this->courier,
-                'courier_service_id' => $service->id, // optional FK
-                'shipping_cost' => $finalCost,
-                'estimated_arrival' => $etaEnd, // bisa simpan end date sebagai ETA
+                'shipping_date' => now(),
+                'tracking_number' => $this->tracking_number ?? $this->generateTracking(),
+                'estimated_arrival' => $this->eta_end,
+                'shipping_cost' => $this->shipping_cost,
+                'courier_service_id' => $service->id,
                 'status' => 'shipped',
             ]);
-
-            // optional: log history
-            if (method_exists($this->order, 'histories')) {
-                $this->order->histories()->create([
-                    'action' => 'shipped',
-                    'meta' => json_encode([
-                        'service' => $service->service_type,
-                        'courier' => $this->courier,
-                        'tracking' => $finalTracking,
-                        'eta_min' => $etaStart->toDateString(),
-                        'eta_max' => $etaEnd->toDateString(),
-                        'shipping_cost' => $finalCost,
-                    ]),
-                    'performed_by' => Auth::id(),
-                ]);
-            }
         });
 
-        session()->flash('success','Order ditandai sebagai dikirim.');
-        $this->order->refresh();
-        $this->emit('orderShipped', $this->order->id);
+        session()->flash('success','Order berhasil dikirim.');
     }
 
-    protected function authorizeShipOrAbort()
+    protected function generateTracking()
     {
-        $this->authorize('ship', $this->order);
+        return strtoupper(substr($this->courier,0,4))
+            . "-S" . Auth::id()
+            . "-O" . $this->order->id
+            . "-" . now()->format('YmdHis');
     }
 
     public function render()
     {
-        return view('livewire.seller.ship-order', [
-            'services' => $this->services,
-        ]);
+        return view('livewire.seller.ship-order');
     }
 }

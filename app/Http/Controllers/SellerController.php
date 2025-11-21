@@ -33,7 +33,7 @@ class SellerController extends Controller
             ->whereMonth('o.OrderDate', $now->month)
             ->whereYear('o.OrderDate', $now->year)
             ->selectRaw('COALESCE(SUM(oi.Price * oi.Qty), 0) as revenue')
-            ->value('revenue');;
+            ->value('revenue');
 
         $activeProducts = DB::table('Product')
             ->where('StoreID', $storeId)
@@ -119,6 +119,26 @@ class SellerController extends Controller
         return back()->withErrors(['store' => 'Tidak dapat membuat atau memperbarui toko. Silakan coba lagi.']);
     }
 
+    public function search(Request $request){
+        $seller = auth()->user()->sellerStore;
+        $validStatuses = ['pending','processing','shipped','delivered','completed','cancelled','refunded'];
+        $status = $request->query('status');
+
+        $query = Order::query()->with(['items.product','user','store']); // eager load sesuai kebutuhan
+
+        // filter status bila ada dan valid
+        if (!empty($status) && in_array(strtolower($status), $validStatuses, true)) {
+            $query->where('status', strtolower($status));
+        }
+
+        // order, paginate (20 per page contoh)
+        $orders = $query->orderBy('created_at', 'desc')
+                        ->paginate(20)
+                        ->withQueryString(); // penting: preserve ?status=... & ?q=... di pagination links
+
+        return view('seller.recent-order', compact('orders'));
+    }
+
     public function viewReecentOrder(){
         $seller = auth()->user()->sellerStore;
         $orders  = Order::whereHas('items.product', function($q) use ($seller){
@@ -133,27 +153,6 @@ class SellerController extends Controller
         // contoh sederhana: gabungkan ID order dengan kode kurir dan timestamp acak
         return strtoupper($courier) . '-' . $order->id . '-' . strtoupper(Str::random(6));
     }
-
-    public function estimateArrival($courier){
-        $courier_data = Shipping::where('id', $courier)->first();
-        $minDays = ;
-        $maxDays = 7;
-        return now()->addDays(rand($minDays, $maxDays));
-    }
-
-    public function ship(Request $request, Order $order){
-        $this->authorize('ship', $order); // akan pakai OrderPolicy@ship
-
-        $order->shipping_date = now();
-        $order->tracking_number = $this->generateTracking($order, $request->courier);
-        $order->courier = $request->courier;
-        $order->estimated_arrival = $this->estimateArrival($request->courier);
-        $order->status = 'shipped';
-        $order->save();
-        // notify customer, create shipment log, dll.
-        return back()->with('success', 'Order marked as shipped.');
-    }
-
 
     public function updateStatus(Request $request, $id){
         $request->validate(['status'=> 'required|string']);
@@ -343,14 +342,21 @@ class SellerController extends Controller
 
     public function viewAnalyticsReview(){
         $seller = auth()->user()->sellerStore;
-        $total_revenue_this_month = OrderItem::whereHas('product', fn($q) => $q->where('seller_store_id', $seller->id))
-        ->whereHas('order', fn($q)=>$q->where('status', 'paid')->whereMonth('order_date', now()->month()))
-        ->sum(DB::raw('price * qty'));
+        $total_revenue = OrderItem::whereHas('product', fn($q) => $q->where('seller_store_id', $seller->id))
+        ->whereHas('order', fn($q) => $q->where('status', 'completed'))
+        ->select(DB::raw('COALESCE(SUM(price * qty), 0) as total'))
+        ->value('total');
         $total_order = Order::whereHas('items.product', fn($q)=> $q->where('seller_store_id', $seller->id))
-        ->where('status', 'paid')->count();
-        $product_sold = OrderItem::whereHas('product', fn($q)=> $q->where('seller_store_id', $seller->id))->sum('qty');
-        $total_customers = User::whereHas('orders.items.product', fn($q)=>$q->where('seller_store_id', $seller->id))->distinct()->count();
-        $best_selliing_prod = OrderItem::whereHas('product' , fn($q)=>$q->where('seller_store_id', $seller->id))->select('product_id', DB::raw('SUM(qty) as sold_items'))->groupBy('product_id')->with(['product:id,name,images'])->take(5)->get();
-        return view('', compact('total_revenue_this_month', 'total_order' ,'product_sold', 'total_customer', 'best_selliing_prod'));
+        ->whereNot('status','cancelled')->count();
+        $product_sold = OrderItem::whereHas('product', fn($q)=> $q->where('seller_store_id', $seller->id))->sum('qty')->whereHas('order', fn($q)=> $q->where('status', 'completed'));
+        $total_customers = Order::whereHas('items.product', fn($q) =>
+        $q->where('seller_store_id', $seller->id))
+        ->whereIn('status', ['completed', 'delivered']) // filter order valid
+        ->distinct()
+        ->count('user_id');
+        $best_selliing_prod = OrderItem::whereHas('product' , fn($q)=>$q->where('seller_store_id', $seller->id))->select('product_id', DB::raw('SUM(qty) as sold_items'))->groupBy('product_id')->with(['product:id,name'])->take(5)->get();
+        $topCustomers = Order::select('user_id', DB::raw('SUM(total_amount) as total_spent'), DB::raw('COUNT(*) as total_orders'))->where('store_id', $seller->id)->groupBy('user_id')->orderByDesc('total_spent')->take(6)->with('user:id,name')->get();
+
+        return view('seller.seller-analytics', compact('total_revenue_this_month', 'total_order' ,'product_sold', 'total_customer', 'best_selliing_prod', 'topCustomers'));
     }
 }
