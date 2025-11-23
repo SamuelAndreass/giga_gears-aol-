@@ -88,8 +88,16 @@
       <!-- Orders Over Time -->
       <section class="gg-card p-3 p-md-4 mb-3">
         <div class="d-flex justify-content-between align-items-center mb-2">
-          <h5 class="mb-0">Orders Over Time</h5>
-          <small class="text-muted">This Month</small>
+          <div class="col-lg-8">
+            <h5 class="mb-0">Orders Over Time</h5>
+          </div>
+          <div class="col-lg-4 d-flex justify-content-end align-items-center gap-2">
+            <select wire:model.debounce.250ms="month" class="form-select form-select-sm">
+              @foreach($months as $value => $label)
+                <option value="{{ $value }}">{{ $label }}</option>
+              @endforeach
+                </select>
+          </div>
         </div>
         <canvas id="ordersChart" height="120"></canvas>
       </section>

@@ -13,7 +13,7 @@ use App\Models\Product;
 use App\Models\Category;
 use App\Models\Shipping;
 use Illuminate\Support\Facades\Validator;
-
+use App\Models\StoreReview;
 
 class SellerController extends Controller
 {
@@ -297,7 +297,7 @@ class SellerController extends Controller
         }
 
         // create product
-        $product = Product::create([
+        Product::create([
             'name' => $request->input('product_name'),
             'category_id' => $request->input('category_id'),
             'seller_store_id' => $seller->id,
@@ -333,12 +333,6 @@ class SellerController extends Controller
         return back()->with('message', 'Stock berhasil diperbaharui');
     }
 
-    public function viewReviewProduct(){
-        $seller = auth()->user()->sellerStore;
-        $review = ProductReview::whereHas('product', fn($q)=> $q->where('seller_store_id', $user->id))
-        ->with(['product', 'user'])->latest()->paginate(10);
-        return view('', compact('review'));
-    }
 
     public function viewAnalyticsReview(){
         $seller = auth()->user()->sellerStore;
@@ -359,4 +353,23 @@ class SellerController extends Controller
 
         return view('seller.seller-analytics', compact('total_revenue_this_month', 'total_order' ,'product_sold', 'total_customer', 'best_selliing_prod', 'topCustomers'));
     }
+
+    public function feedback(){
+        $seller = auth()->user()->sellerStore;
+        $product_feedbacks = ProductReview::whereHas('product', fn($q)=> $q->where('seller_store_id', $seller->id))
+        ->with(['product', 'user'])->latest()->paginate(10);
+        $store_feedbacks = StoreReview::where('seller_store_id', $seller->id)->with(['user'])->latest()->paginate(10);
+        return view('seller.seller-inbox', compact('product_feedbacks', 'store_feedbacks'));
+    }
+    
+    public function replyFeedback(Request $request, ProductReview $review){
+        $seller = auth()->user()->sellerStore;
+        abort_unless($review->product->seller_store_id == $seller->id, 403, 'Anda tidak memiliki akses untuk membalas feedback ini!');
+        $validated = $request->validate(['reply' => 'required|string|max:2000']);
+        // Simpan balasan ke database atau kirim email ke user
+        // Contoh: $review->update(['seller_reply' => $validated['reply']]);
+        return back()->with('message', 'Balasan berhasil dikirim.');
+    }
+
+
 }

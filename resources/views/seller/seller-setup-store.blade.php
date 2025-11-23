@@ -4,87 +4,17 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>GigaGears — Set Up Your Store</title>
-
-  <!-- Bootstrap & Icons -->
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css">
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css">
-
-  <!-- Google Font (Chakra Petch) -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@400;600;700;800&display=swap" rel="stylesheet">
-
-  <style>
-    :root{
-    --auth-radial: rgba(91,140,255,.18);
-    --auth-top:   #eef5ff;
-    --auth-mid:   #ffffff;
-    --auth-bot:   #eaf3ff;
-  }
-  body.bg-auth{
-    background:
-      radial-gradient(1100px 500px at 50% -120px, var(--auth-radial), transparent 60%),
-      linear-gradient(180deg, var(--auth-top) 0%, var(--auth-mid) 46%, var(--auth-bot) 100%);
-  }
-    :root{
-      --gg-primary:#5b8cff;
-      --gg-muted:#6b7280;
-      --gg-radius:16px;
-      --gg-dark:#1f2b57;
-    }
-
-    /* === BG sama persis dengan halaman Sign Up === */
-    body{
-      font-family:"Chakra Petch", system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
-      background:
-        radial-gradient(1100px 520px at 72% 18%, rgba(91,140,255,.16), transparent 58%),
-        linear-gradient(180deg, #eaf2ff 0%, #edf5ff 45%, #e6f0ff 100%);
-      background-attachment: fixed, fixed;
-      min-height:100vh;
-    }
-
-    /* Sheet memanjang (scroll di body) */
-    .sheet{
-      max-width: 1160px;
-      background:#fff;
-      border-radius:24px;
-      box-shadow:0 16px 40px rgba(15,34,85,.12), 0 2px 0 rgba(15,34,85,.04) inset;
-      margin:24px auto;
-      padding:28px 20px;
-    }
-    @media (min-width: 768px){ .sheet{ padding:40px 36px; } }
-    @media (min-width: 992px){ .sheet{ padding:48px; } }
-
-    .brand-img{ display:inline-flex; align-items:center; gap:.5rem; text-decoration:none; }
-    .brand-logo{ height:32px; width:auto; display:block; }
-    @media (min-width:992px){ .brand-logo{ height:36px; } }
-
-    .section-hint{ color:var(--gg-muted); }
-    .legend{ font-weight:700; font-size:1rem; margin-bottom:.5rem; }
-    .legend small{ color:var(--gg-muted); font-weight:600; }
-
-    .form-control, .form-select{
-      background:#f6f8fd;
-      border:1px solid #e4e9f6;
-      border-radius:12px;
-      font-weight:500;
-    }
-    .form-control:focus, .form-select:focus{
-      background:#fff;
-      border-color:var(--gg-primary);
-      box-shadow:0 0 0 .25rem rgba(91,140,255,.15);
-    }
-    .btn-dark-gg{ background:#1f2b57; border-color:#1f2b57; color:#fff; font-weight:800; border-radius:12px; }
-    .btn-dark-gg:hover{ filter:brightness(.95); color:#fff; }
-
-    .upload-row .btn{ border-radius:10px; }
-  </style>
+  <link rel="stylesheet" href="{{ asset('css/setup.css') }}">
 </head>
 <body>
 <body class="bg-auth">
 
   <div class="sheet">
-    <!-- Brand -->
     <a href="#" class="brand-img" aria-label="GigaGears">
   <img
     src="../assets/gigagears-logo.png"
@@ -162,10 +92,10 @@
             <label class="form-label">City/District</label>
             <select class="form-select">
               <option selected disabled {{ old('city') ? '' : 'selected' }}>Choose city/district</option>
-              <option {{ old('city') == 'Jakarta Selatan' ? 'selected' : '' }}>Jakarta Selatan</option>
-              <option {{ old('city') == 'Bandung' ? 'selected' : '' }}>Bandung</option>
-              <option {{ old('city') == 'Semarang' ? 'selected' : '' }}>Semarang</option>
-              <option {{ old('city') == 'Surabaya' ? 'selected' : '' }}>Surabaya</option>
+              <option {{ old('city') == 'Jakarta' ? 'selected' : '' }}>Jakarta</option>
+              <option {{ old('city') == 'Bogor' ? 'selected' : '' }}>Bogor</option>
+              <option {{ old('city') == 'Depok' ? 'selected' : '' }}>Depok</option>
+              <option {{ old('city') == 'Bekasi' ? 'selected' : '' }}>Bekasi</option>
               <option {{ old('city') == 'Tangerang' ? 'selected' : '' }}>Tangerang</option>
             </select>
             @error('city') <div class="invalid-feedback">{{ $message }}</div>@enderror

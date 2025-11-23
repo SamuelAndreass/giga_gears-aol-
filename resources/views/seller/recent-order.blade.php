@@ -25,12 +25,11 @@
         </a>
 
         <nav class="nav flex-column nav-gg">
-          <a class="nav-link" href="dashboard.html"><i class="bi bi-grid-1x2"></i>Dashboard</a>
-          <a class="nav-link active" href="order.html"><i class="bi bi-bag"></i>Order</a>
-          <a class="nav-link" href="product.html"><i class="bi bi-box"></i>Products</a>
-          <a class="nav-link" href="balance.html"><i class="bi bi-wallet2"></i>Balance & Withdraw</a>
-          <a class="nav-link" href="analytics.html"><i class="bi bi-bar-chart"></i>Analytics & Report</a>
-          <a class="nav-link" href="inbox.html"><i class="bi bi-inbox"></i>Inbox</a>
+          <a class="nav-link" href="{{ route('seller.index') }}"><i class="bi bi-grid-1x2"></i>Dashboard</a>
+          <a class="nav-link" href="{{ route('seller.orders') }}"><i class="bi bi-bag"></i>Order</a>
+          <a class="nav-link active" href="{{ route('seller.products') }}"><i class="bi bi-box"></i>Products</a>
+          <a class="nav-link" href="{{ route('seller.analytics') }}"><i class="bi bi-bar-chart"></i>Analytics & Report</a>
+          <a class="nav-link" href="{{ route('seller.inbox') }}"><i class="bi bi-inbox"></i>Inbox</a>
           <hr>
           <a class="nav-link" href="settings.html"><i class="bi bi-gear"></i>Settings</a>
         </nav>
@@ -183,7 +182,7 @@
                         <select wire:model="courier" id="orderStatus" class="form-select">
                           <option value="all">--Pilih Kurir---</option>
                           @foreach($courier as $c)
-                            <option value="{{ $c{'name'} }}">{{ $c{'name'} }}</option>
+                            <option value="{{ $c['name'] }}">{{ $c['name'] }}</option>
                           @endforeach      
                         </select>
                         @error('courier') <small class="text-danger">{{ $message }}</small> @enderror

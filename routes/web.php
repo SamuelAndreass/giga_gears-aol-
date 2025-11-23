@@ -32,15 +32,15 @@ Route::middleware(['auth'])->group(function(){
 // seller
 Route::middleware(['auth','ensure.seller'])->group(function(){
     Route::get('/seller', [SellerController::class, 'viewMainDashboard'])->name('seller.index');
-    Route::get('/seller/product', [SellerController::class, 'viewProd']);
-    Route::get('/seller/analytics', [SellerController::class, 'viewAnalyticsReview']);
-    Route::get('/seller/inbox', [SellerController::class, 'viewReviewProduct']);
+    Route::get('/seller/product', [SellerController::class, 'viewProd'])->name('seller.products');
+    Route::get('/seller/analytics', [SellerController::class, 'viewAnalyticsReview'])->name('seller.analytics');
+    Route::get('/seller/inbox', [SellerController::class, 'feedback'])->name('seller.inbox');
     Route::delete('/seller/remove/product/{id}', [SellerController::class, 'deleteProd']);
     Route::post('/seller/add/product', [SellerController::class,'addProduct'])->name('seller.add.product');
     Route::get('/seller/add/product', [SellerController::class,'viewAddProductForm'])->name('seller.view.add.product');
     Route::post('/seller/update/product/{id}', [SellerController::class, '']);
     Route::post('/seller/update/status', [SellerController::class, 'updateStatus']);
-    Route::get('/seller/recent-order', [SellerController::class,'viewReecentOrder']);
+    Route::get('/seller/recent-order', [SellerController::class,'viewReecentOrder'])->name('seller.orders');
     Route::get('seller/recent-order', [SellerController::class,'search'])->name('seller.recent.order');
 
 });

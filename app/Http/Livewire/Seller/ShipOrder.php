@@ -121,6 +121,6 @@ class ShipOrder extends Component
 
     public function render()
     {
-        return view('livewire.seller.ship-order');
+        return view('livewire.seller.recent-order');
     }
 }

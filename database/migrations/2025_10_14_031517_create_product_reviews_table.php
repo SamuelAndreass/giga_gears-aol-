@@ -10,7 +10,9 @@ return new class extends Migration {
             $table->foreignId('user_id')->constrained()->onDelete('cascade'); 
             $table->integer('rating'); 
             $table->text('comment');
-            $table->boolean('is_verified')->default(false); 
+            $table->boolean('is_verified')->default(false);
+            $table->string('response_message')->nullable();
+            $table->foreignId('responder_id')->nullable()->constrained('users')->onDelete('set null');
             $table->timestamps();
         });
     }
