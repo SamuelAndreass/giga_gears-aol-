@@ -61,7 +61,7 @@
         <div class="row g-3">
 
           <!-- ========= KIRI ========= -->
-          <div class="col-12 col-xl-7">
+          <div class="col-12 col-xl-12">
             <!-- Profil Toko -->
             <section class="gg-card p-3 p-md-4 mb-3">
               <div class="d-flex align-items-center justify-content-between mb-3">
@@ -159,42 +159,13 @@
               </div>
             </section>
 
-            <!-- Notifikasi -->
-            <section class="gg-card p-3 p-md-4 mb-3">
-              <div class="d-flex align-items-center justify-content-between mb-3">
-                <h5 class="mb-0">Notifications</h5>
-                <button class="btn btn-sm btn-primary" id="btnSaveNotif"><i class="bi bi-save me-1"></i>Save</button>
-              </div>
-
-              <div class="row g-3">
-                <div class="col-12 col-md-6">
-                  <div class="form-check form-switch">
-                    <input class="form-check-input" type="checkbox" id="notifEmail" checked>
-                    <label class="form-check-label" for="notifEmail">Email notifications</label>
-                  </div>
-                  <div class="form-check form-switch">
-                    <input class="form-check-input" type="checkbox" id="notifPush" checked>
-                    <label class="form-check-label" for="notifPush">Push notifications</label>
-                  </div>
-                </div>
-                <div class="col-12 col-md-6">
-                  <label class="form-label mb-1">Digest Frequency</label>
-                  <select id="digest" class="form-select">
-                    <option value="daily" selected>Daily</option>
-                    <option value="weekly">Weekly</option>
-                    <option value="monthly">Monthly</option>
-                  </select>
-                </div>
-              </div>
-            </section>
-          </div>
-
+          
+        <div class="row g-3 align-items-start">
           <!-- ========= KANAN ========= -->
-          <div class="col-12 col-xl-5">
+          <div class="col-lg-8 col-md-7 col-12">
             <!-- Keamanan (tanpa 2FA) -->
             <section class="gg-card p-3 p-md-4 mb-3">
               <h5 class="mb-3">Security</h5>
-
               <div class="mb-2">
                 <label class="form-label mb-1">Change Password</label>
                 <div class="row g-2">
@@ -214,63 +185,23 @@
                 </div>
               </div>
             </section>
-
-            <!-- Integrasi -->
-            <section class="gg-card p-3 p-md-4 mb-3">
-              <div class="d-flex align-items-center justify-content-between mb-2">
-                <h5 class="mb-0">Integrations</h5>
-                <button class="btn btn-sm btn-outline-secondary"><i class="bi bi-puzzle me-1"></i>Browse</button>
-              </div>
-
-              <ul class="list-group list-group-flush">
-                <li class="list-group-item d-flex align-items-center justify-content-between px-0">
-                  <div class="d-flex align-items-center gap-3">
-                    <i class="bi bi-credit-card fs-5 text-primary"></i>
-                    <div>
-                      <div class="fw-semibold">Midtrans</div>
-                      <small class="text-muted">Payment Gateway</small>
-                    </div>
-                  </div>
-                  <button class="btn btn-sm btn-outline-primary">Connect</button>
-                </li>
-                <li class="list-group-item d-flex align-items-center justify-content-between px-0">
-                  <div class="d-flex align-items-center gap-3">
-                    <i class="bi bi-truck fs-5 text-success"></i>
-                    <div>
-                      <div class="fw-semibold">Shipper</div>
-                      <small class="text-muted">Shipping Aggregator</small>
-                    </div>
-                  </div>
-                  <button class="btn btn-sm btn-outline-primary">Connect</button>
-                </li>
-                <li class="list-group-item d-flex align-items-center justify-content-between px-0">
-                  <div class="d-flex align-items-center gap-3">
-                    <i class="bi bi-bar-chart-line fs-5 text-info"></i>
-                    <div>
-                      <div class="fw-semibold">Google Analytics</div>
-                      <small class="text-muted">Tracking & Insights</small>
-                    </div>
-                  </div>
-                  <button class="btn btn-sm btn-outline-primary">Connect</button>
-                </li>
-              </ul>
-            </section>
-
+            </div>
+          <div class="col-lg-4 col-md-5 col-12">
             <!-- Danger Zone -->
-            <section class="gg-card p-3 p-md-4">
-              <h5 class="mb-3 text-danger">Danger Zone</h5>
-              <div class="d-flex flex-column gap-2">
-                <button class="btn btn-outline-danger" data-bs-toggle="modal" data-bs-target="#modalClearData">
-                  <i class="bi bi-trash3 me-1"></i> Clear test data
-                </button>
-                <button class="btn btn-danger" data-bs-toggle="modal" data-bs-target="#modalDeleteStore">
-                  <i class="bi bi-exclamation-octagon me-1"></i> Delete store
-                </button>
-              </div>
-            </section>
+              <section class="gg-card p-3 p-md-4">
+                <h5 class="mb-3 text-danger">Danger Zone</h5>
+                <div class="d-flex flex-column gap-2">
+                  <button class="btn btn-outline-danger" data-bs-toggle="modal" data-bs-target="#modalClearData">
+                    <i class="bi bi-trash3 me-1"></i> Clear test data
+                  </button>
+                  <button class="btn btn-danger" data-bs-toggle="modal" data-bs-target="#modalDeleteStore">
+                    <i class="bi bi-exclamation-octagon me-1"></i> Delete store
+                  </button>
+                </div>
+              </section>
+          </div>
           </div>
         </div>
-
         <p class="text-center mt-4 foot small mb-0">© 2025 GigaGears. All rights reserved.</p>
       </main>
     </div>
