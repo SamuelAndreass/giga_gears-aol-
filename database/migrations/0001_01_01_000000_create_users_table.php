@@ -20,6 +20,7 @@ return new class extends Migration
             $table->string('profile_image')->nullable();
             $table->boolean('is_seller')->default(false);
             $table->string('role')->default('customer');
+            $table->string('photoProfile')->nullable();
             $table->rememberToken();
             $table->timestamps();
         });

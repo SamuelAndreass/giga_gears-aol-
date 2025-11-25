@@ -33,7 +33,7 @@
           <a class="nav-link" href="{{ route('seller.analytics') }}"><i class="bi bi-bar-chart"></i>Analytics & Report</a>
           <a class="nav-link" href="{{ route('seller.inbox') }}"><i class="bi bi-inbox"></i>Inbox</a>
           <hr>
-          <a class="nav-link" href="settings.html"><i class="bi bi-gear"></i>Settings</a>
+          <a class="nav-link" href="{{ route('seller.settings.index')}}"><i class="bi bi-gear"></i>Settings</a>
         </nav>
 
         <div class="mt-4">

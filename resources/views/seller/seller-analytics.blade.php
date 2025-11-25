@@ -24,16 +24,15 @@
         <img src="../assets/gigagears-logo.png" alt="GigaGears" class="brand-logo">
       </a>
 
-      <nav class="nav flex-column nav-gg">
-        <a class="nav-link" href="dashboard.html"><i class="bi bi-grid-1x2"></i>Dashboard</a>
-        <a class="nav-link" href="order.html"><i class="bi bi-bag"></i>Order</a>
-        <a class="nav-link" href="product.html"><i class="bi bi-box"></i>Products</a>
-        <a class="nav-link" href="balance.html"><i class="bi bi-wallet2"></i>Balance & Withdraw</a>
-        <a class="nav-link active" href="analytics.html"><i class="bi bi-bar-chart"></i>Analytics & Report</a>
-        <a class="nav-link" href="inbox.html"><i class="bi bi-inbox"></i>Inbox</a>
-        <hr>
-        <a class="nav-link" href="settings.html"><i class="bi bi-gear"></i>Settings</a>
-      </nav>
+        <nav class="nav flex-column nav-gg">
+          <a class="nav-link" href="{{ route('seller.index') }}"><i class="bi bi-grid-1x2"></i>Dashboard</a>
+          <a class="nav-link" href="{{ route('seller.orders') }}"><i class="bi bi-bag"></i>Order</a>
+          <a class="nav-link active" href="{{ route('seller.products') }}"><i class="bi bi-box"></i>Products</a>
+          <a class="nav-link" href="{{ route('seller.analytics') }}"><i class="bi bi-bar-chart"></i>Analytics & Report</a>
+          <a class="nav-link" href="{{ route('seller.inbox') }}"><i class="bi bi-inbox"></i>Inbox</a>
+          <hr>
+          <a class="nav-link" href="{{ route('seller.settings.index')}}"><i class="bi bi-gear"></i>Settings</a>
+        </nav>
 
       <div class="mt-4">
         <button class="btn btn-outline-danger w-100"><i class="bi bi-box-arrow-right me-1"></i> Log Out</button>

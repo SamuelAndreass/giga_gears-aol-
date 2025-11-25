@@ -14,3 +14,6 @@ ongoing update:
 [] edit settings page seller
 [] test every page (make seeder debuging)
 
+
+optional:
+[] email verification

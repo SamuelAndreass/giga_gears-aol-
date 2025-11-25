@@ -63,10 +63,13 @@
           <!-- ========= KIRI ========= -->
           <div class="col-12 col-xl-12">
             <!-- Profil Toko -->
+          <form  method="POST" action="{{ route('sller.settings.owner.update') }}" enctype="multipart/form-data">
+            @csrf
+            @method('put')
             <section class="gg-card p-3 p-md-4 mb-3">
               <div class="d-flex align-items-center justify-content-between mb-3">
-                <h5 class="mb-0">Profile</h5>
-                <button class="btn btn-sm btn-primary" id="btnSaveProfile">
+                <h5 class="mb-0">Seller Settings</h5>
+                <button class="btn btn-sm btn-primary" id="btnSaveProfile" type="submit">
                   <i class="bi bi-save me-1"></i>Save
                 </button>
               </div>
@@ -74,115 +77,102 @@
               <div class="row g-3 align-items-center">
                 <div class="col-auto">
                   <div class="position-relative">
-                    <img id="avatarPreview" src="https://i.pravatar.cc/96" class="rounded-circle border" alt="avatar" style="width:80px;height:80px;object-fit:cover">
-                    <button class="btn btn-sm btn-light position-absolute bottom-0 end-0 rounded-circle border" id="btnAvatarPick" title="Change avatar">
+                    <img id="avatarPreview" src="{{ $user->photoProfile ? asset('storage/' . $user->photoProfile) : 'https://i.pravatar.cc/96' }}" class="rounded-circle border" alt="avatar" style="width:80px;height:80px;object-fit:cover">
+                    <button class="btn btn-sm btn-light position-absolute bottom-0 end-0 rounded-circle border" id="btnAvatarPick" title="Change avatar" type="button" aria-label="Change avatar">
                       <i class="bi bi-camera-fill"></i>
                     </button>
-                    <input id="avatarInput" type="file" accept="image/*" class="d-none">
+
+                    <input id="avatarInput" name="owner_photo" type="file" accept="image/*" class="d-none">
+                    @error('owner_photo') <div class="text-danger small mt-1">{{ $message }}</div> @enderror
                   </div>
                 </div>
                 <div class="col">
                   <div class="row g-2">
                     <div class="col-12 col-md-6">
-                      <label class="form-label mb-1">Store Name</label>
-                      <input id="storeName" type="text" class="form-control" value="TechnoWorld">
-                    </div>
-                    <div class="col-12 col-md-6">
                       <label class="form-label mb-1">Owner Name</label>
-                      <input id="ownerName" type="text" class="form-control" value="John Doe">
+                      <input id="owner_name" name="owner_name" type="text" class="form-control" value="{{ old('owner_name', $user->name) }}">
+                      @error('owner_name') <div class="text-danger small mt-1">{{ $message }}</div> @enderror
                     </div>
                     <div class="col-12 col-md-6">
                       <label class="form-label mb-1">Email</label>
-                      <input id="email" type="email" class="form-control" value="owner@technoworld.com">
-                    </div>
-                    <div class="col-12 col-md-6">
-                      <label class="form-label mb-1">Phone</label>
-                      <input id="phone" type="text" class="form-control" value="+62 812-3456-7890">
-                    </div>
-                    <div class="col-12">
-                      <label class="form-label mb-1">Store Address</label>
-                      <textarea id="address" rows="2" class="form-control">Jl. Mawar No. 1, Jakarta</textarea>
+                      <input id="owner_name" name="owner_email" type="text" class="form-control" value="{{ old('owner_email', $user->email) }}">
+                      @error('owner_email') <div class="text-danger small mt-1">{{ $message }}</div> @enderror
                     </div>
                   </div>
                 </div>
               </div>
             </section>
-
+          </form>
             <!-- Preferensi Toko -->
-            <section class="gg-card p-3 p-md-4 mb-3">
-              <div class="d-flex align-items-center justify-content-between mb-3">
-                <h5 class="mb-0">Store Preferences</h5>
-                <button class="btn btn-sm btn-primary" id="btnSavePref"><i class="bi bi-save me-1"></i>Save</button>
-              </div>
-
-              <div class="row g-3">
-                <div class="col-12 col-md-6">
-                  <label class="form-label mb-1">Currency</label>
-                  <select id="currency" class="form-select">
-                    <option value="USD">$ - USD</option>
-                    <option value="IDR" selected>Rp - IDR</option>
-                    <option value="EUR">€ - EUR</option>
-                  </select>
+            <form method="POST" action="{{ route('seller.settings.store.update') }}" enctype="multipart/form-data">
+              @csrf
+              @method('put')
+              <section class="gg-card p-3 p-md-4 mb-3">
+                <div class="d-flex align-items-center justify-content-between mb-3">
+                  <h5 class="mb-0">Store Settings</h5>
+                  <button class="btn btn-sm btn-primary" id="btnSavePref" type="submit"><i class="bi bi-save me-1"></i>Save</button>
                 </div>
-                <div class="col-12 col-md-6">
-                  <label class="form-label mb-1">Timezone</label>
-                  <select id="timezone" class="form-select">
-                    <option>Asia/Jakarta (WIB)</option>
-                    <option>Asia/Makassar (WITA)</option>
-                    <option>Asia/Jayapura (WIT)</option>
-                  </select>
-                </div>
-                <div class="col-12 col-md-6">
-                  <label class="form-label mb-1">Default Shipping</label>
-                  <select id="defaultShip" class="form-select">
-                    <option selected>JNE</option>
-                    <option>J&T</option>
-                    <option>SiCepat</option>
-                    <option>Pos Indonesia</option>
-                  </select>
-                </div>
-                <div class="col-12 col-md-6">
-                  <label class="form-label mb-1">Product Display</label>
-                  <select id="productDisplay" class="form-select">
-                    <option value="grid" selected>Grid</option>
-                    <option value="list">List</option>
-                  </select>
-                </div>
-                <div class="col-12">
-                  <div class="form-check">
-                    <input class="form-check-input" type="checkbox" id="autoAccept">
-                    <label class="form-check-label" for="autoAccept">
-                      Auto-accept paid orders
-                    </label>
+                <div class="row g-3">
+                  <div class="col-auto">
+                    <div class="position-relative">
+                      <img id="avatarPreview" src="{{ $store->store_logo ? asset('storage/' . $store->store_logo) : 'https://i.pravatar.cc/96' }}" class="rounded-circle border" alt="avatar" style="width:80px;height:80px;object-fit:cover">
+                      <button class="btn btn-sm btn-light position-absolute bottom-0 end-0 rounded-circle border" id="btnAvatarPick" title="Change avatar">
+                        <i class="bi bi-camera-fill"></i>
+                      </button>
+                      <input id="avatarInput" name="store_logo" type="file" accept="image/*" class="d-none">
+                      @error('store_logo') <div class="text-danger small mt-1">{{ $message }}</div> @enderror
+                    </div>
+                  </div>
+                  
+                  <div class="col">
+                    <div class="row g-2">
+                      <div class="col-12 col-md-6">
+                        <label class="form-label mb-1">Store name</label>
+                        <input id="storeName" name="store_name" type="text" class="form-control" value="{{ old('store_name', $store->name) }}">    
+                      </div>
+                      <div class="col-12 col-md-6">
+                        <label class="form-label mb-1">Contact</label>
+                        <input id="phone" type="text" name="store_phone" class="form-control" value=" {{ old('store_phone', $store->phone) }}">
+                      </div>
+                        <div class="col-12">
+                        <label class="form-label mb-1">Store address</label>
+                        <textarea id="address" rows="2" class="form-control" name="store_address">{{ old('store_address', $store->address)}}</textarea>
+                        </div>
+                      </div>
+                    </div>
+                  </div>                
                   </div>
                 </div>
-              </div>
-            </section>
-
-          
+              </section>
+            </form>
+           
         <div class="row g-3 align-items-start">
-          <!-- ========= KANAN ========= -->
+
           <div class="col-lg-8 col-md-7 col-12">
             <!-- Keamanan (tanpa 2FA) -->
             <section class="gg-card p-3 p-md-4 mb-3">
               <h5 class="mb-3">Security</h5>
               <div class="mb-2">
-                <label class="form-label mb-1">Change Password</label>
-                <div class="row g-2">
-                  <div class="col-12">
-                    <input id="pwCurrent" type="password" class="form-control" placeholder="Current password">
-                  </div>
-                  <div class="col-12 col-md-6">
-                    <input id="pwNew" type="password" class="form-control" placeholder="New password">
-                  </div>
-                  <div class="col-12 col-md-6">
-                    <input id="pwConfirm" type="password" class="form-control" placeholder="Confirm new password">
-                  </div>
-                </div>
-                <div class="form-text" id="pwHint">Min. 8 karakter, kombinasi huruf & angka.</div>
-                <div class="mt-2">
-                  <button class="btn btn-sm btn-primary" id="btnChangePw"><i class="bi bi-shield-lock me-1"></i>Update Password</button>
-                </div>
+                <form method="POST" action= "{{ route('seller.settings.password.update') }}">
+                  @csrf
+                  @method('put') 
+                  <label class="form-label mb-1">Change Password</label>
+                    <div class="row g-2">
+                      <div class="col-12">
+                        <input id="pwCurrent" type="password" class="form-control" placeholder="Current password">
+                      </div>
+                      <div class="col-12 col-md-6">
+                        <input id="pwNew" type="password" class="form-control" placeholder="New password">
+                      </div>
+                      <div class="col-12 col-md-6">
+                        <input id="pwConfirm" type="password" class="form-control" placeholder="Confirm new password">
+                      </div>
+                    </div>
+                    <div class="form-text" id="pwHint">Min. 8 karakter, kombinasi huruf & angka.</div>
+                      <div class="mt-2">
+                        <button type="submit" class="btn btn-sm btn-primary" id="btnChangePw"><i class="bi bi-shield-lock me-1"></i>Update Password</button>
+                      </div>  
+                </form>
               </div>
             </section>
             </div>
@@ -243,65 +233,20 @@
     </div>
   </div>
 
-  <!-- Toast -->
-  <div class="position-fixed bottom-0 end-0 p-3" style="z-index:1080">
-    <div id="saveToast" class="toast align-items-center text-bg-success border-0" role="alert">
-      <div class="d-flex">
-        <div class="toast-body"><i class="bi bi-check2-circle me-2"></i>Tersimpan!</div>
-        <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button>
+  @if(session('success'))
+    <div class="position-fixed bottom-0 end-0 p-3" style="z-index:1080">
+      <div id="saveToast" class="toast align-items-center text-bg-success border-0" role="alert">
+        <div class="d-flex">
+          <div class="toast-body"><i class="bi bi-check2-circle me-2"></i>Tersimpan!</div>
+          <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button>
+        </div>
       </div>
     </div>
-  </div>
+  @endif
 
   <!-- Bootstrap JS -->
   <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+  <script src="{{ asset('js/settings')}}"></script>
 
-  <!-- Page JS -->
-  <script>
-    const toast = new bootstrap.Toast(document.getElementById('saveToast'));
-    const showSaved = () => toast.show();
-
-    // Avatar preview
-    document.getElementById('btnAvatarPick').addEventListener('click', ()=> {
-      document.getElementById('avatarInput').click();
-    });
-    document.getElementById('avatarInput').addEventListener('change', (e)=> {
-      const f = e.target.files?.[0];
-      if(!f) return;
-      const url = URL.createObjectURL(f);
-      document.getElementById('avatarPreview').src = url;
-    });
-
-    // Save buttons (dummy)
-    ['btnSaveProfile','btnSavePref','btnSaveNotif'].forEach(id=>{
-      document.getElementById(id).addEventListener('click', showSaved);
-    });
-
-    // Password only (tanpa 2FA)
-    document.getElementById('btnChangePw').addEventListener('click', ()=>{
-      const cur = document.getElementById('pwCurrent').value.trim();
-      const nw  = document.getElementById('pwNew').value.trim();
-      const cf  = document.getElementById('pwConfirm').value.trim();
-      if(!cur || !nw || !cf) return alert('Isi semua kolom password.');
-      if(nw.length < 8) return alert('Password baru minimal 8 karakter.');
-      if(nw !== cf) return alert('Konfirmasi password tidak cocok.');
-      showSaved();
-      document.getElementById('pwCurrent').value = '';
-      document.getElementById('pwNew').value = '';
-      document.getElementById('pwConfirm').value = '';
-    });
-
-    // Danger zone actions
-    document.getElementById('btnClearOk').addEventListener('click', showSaved);
-
-    const delInput = document.getElementById('confirmDelete');
-    const delBtn   = document.getElementById('btnDeleteStore');
-    delInput.addEventListener('input', ()=>{
-      delBtn.disabled = (delInput.value.trim() !== 'DELETE');
-    });
-    delBtn.addEventListener('click', ()=>{
-      showSaved();
-    });
-  </script>
 </body>
 </html>

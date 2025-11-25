@@ -41,13 +41,17 @@ class SettingsController extends Controller
 
         DB::beginTransaction();
         try {
-            $emailChanged = array_key_exists('email', $validated) && $validated['email'] !== $user->email;
-
+            $emailChanged = $validated['email'] !== $user->email;
             $user->name = $validated['owner_name'];
             $user->email = $validated['email'];
-            if (array_key_exists('phone', $validated)) {
-                // pastikan kolom phone ada di users table
-                $user->phone = $validated['phone'];
+            if($request->hasFile('owner_photo')){
+                // Hapus foto lama bila ada
+                if ($user->owner_photo && Storage::disk('public')->exists($user->owner_photo)) {
+                    Storage::disk('public')->delete($user->owner_photo);
+                }
+
+                $path = $request->file('owner_photo')->store('seller_photos', 'public');
+                $user->owner_photo = $path;
             }
 
             if ($emailChanged) {
@@ -56,16 +60,7 @@ class SettingsController extends Controller
             }
 
             $user->save();
-
             DB::commit();
-
-            // Optional: send verification email if email changed (depends on app setup)
-            if ($emailChanged) {
-                // Jika menggunakan Laravel's MustVerifyEmail:
-                if ($user instanceof \Illuminate\Contracts\Auth\MustVerifyEmail) {
-                    $user->sendEmailVerificationNotification();
-                }
-            }
 
             return back()->with('success', 'Informasi pemilik berhasil diperbarui.' . ($emailChanged ? ' Mohon cek email untuk verifikasi ulang.' : ''));
         } catch (\Throwable $e) {
@@ -94,17 +89,18 @@ class SettingsController extends Controller
         try {
             $storeData = [
                 'name' => $validated['store_name'],
-                'address' => $validated['address'] ?? $store->address,
+                'address' => array_key_exists('address', $validated) ? $validated['address'] : $store->address,
+                'phone' => array_key_exists('store_phone', $validated) ? $validated['store_phone'] : $store->phone,
             ];
 
-            if ($request->hasFile('avatar')) {
+            if ($request->hasFile('store_logo')) {
                 // Hapus avatar lama bila ada
-                if ($store->avatar_path && Storage::disk('public')->exists($store->avatar_path)) {
-                    Storage::disk('public')->delete($store->avatar_path);
+                if ($store->store_logo && Storage::disk('public')->exists($store->store_logo)) {
+-                    Storage::disk('public')->delete($store->store_logo);
                 }
 
-                $path = $request->file('avatar')->store('store_avatars', 'public');
-                $storeData['avatar_path'] = $path;
+                $path = $request->file('store_logo')->store('store_logo', 'public');
+                $storeData['store_logo'] = $path;
             }
 
             $store->update($storeData);

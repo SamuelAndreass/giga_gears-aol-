@@ -46,16 +46,10 @@ Route::middleware(['auth','ensure.seller'])->prefix('seller')->group(function(){
 });
 
 
-Route::middleware(['auth','verified'])->prefix('seller')->name('seller.')->group(function () {
+Route::middleware(['auth','ensure.seller'])->prefix('seller')->name('seller.')->group(function () {
         Route::get('settings', [SettingsController::class, 'index'])->name('settings.index');
-
-        // Owner / akun user
         Route::post('settings/owner', [SettingsController::class, 'updateOwner'])->name('settings.owner.update');
-
-        // Store / toko
         Route::post('settings/store', [SettingsController::class, 'updateStore'])->name('settings.store.update');
-
-        // Password (security)
         Route::post('settings/password', [SettingsController::class, 'updatePassword'])->name('settings.password.update');
     });
 

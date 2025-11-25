@@ -16,8 +16,7 @@ class UpdateStoreRequest extends FormRequest
         return [
             'store_name' => 'required|string|max:255',
             'address' => 'nullable|string|max:1000',
-            'avatar' => 'nullable|image|mimes:jpg,jpeg,png,webp|max:4096',
-            // tambahkan store-specific fields bila perlu
+            'store_logo' => 'nullable|image|mimes:jpg,jpeg,png,webp|max:4096',
         ];
     }
 }

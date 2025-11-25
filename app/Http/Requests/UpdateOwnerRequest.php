@@ -19,7 +19,6 @@ class UpdateOwnerRequest extends FormRequest
         return [
             'owner_name' => 'required|string|max:255',
             'email' => 'required|email|max:255|unique:users,email,' . $userId,
-            'phone' => 'nullable|string|max:50',
         ];
     }
 }
