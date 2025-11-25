@@ -21,6 +21,7 @@ class DatabaseSeeder extends Seeder
         $this->call([
             \Database\Seeders\InitialUsersSeeder::class,
             \Database\Seeders\ProductSeeder::class,
+            \Database\Seeders\CategorySeeder::class,
         ]);
 
     }

@@ -4,38 +4,34 @@ namespace Database\Seeders;
 
 use Illuminate\Database\Seeder;
 use App\Models\Product;
-use App\Models\Store;
+use App\Models\Category;
+use App\Models\SellerStore;
 
 class ProductSeeder extends Seeder
 {
     public function run()
     {
-        // Ambil seller store (asumsi hanya ada satu demo store)
-        $store = Store::first();
-
+        $store = SellerStore::first();
         if (! $store) {
-            $this->command->info('No store found, skipping ProductSeeder.');
+            $this->command->warn('No seller store found. Skipping product seeder.');
+            return;
+        }
+
+        $categories = Category::all();
+        if ($categories->isEmpty()) {
+            $this->command->warn('No categories found. Please run CategorySeeder first.');
             return;
         }
 
         $total = 20;
-
-        // Create majority products for this store
-        $forStore = intval($total * 0.75);
-
-        for ($i = 0; $i < $forStore; $i++) {
-            Product::factory()->create([
+        for ($i = 0; $i < $total; $i++) {
+            $product = Product::factory()->create([
                 'seller_store_id' => $store->id,
             ]);
-        }
 
-        // Create remaining products (no seller or random)
-        $remaining = $total - $forStore;
-        for ($i = 0; $i < $remaining; $i++) {
-            Product::factory()->create([
-                // If you want them without seller, set seller_store_id => null
-                'seller_store_id' => $store->id, // or null if you prefer
-            ]);
+            // pilih 1..3 kategori acak (pastikan ada kategori)
+            $attach = $categories->random(rand(1, min(3, $categories->count())))->pluck('id')->toArray();
+            $product->categories()->sync($attach);
         }
     }
 }

@@ -40,5 +40,5 @@ class SellerStore extends Model
             'verified_by' => $adminId,
         ]);
     }
-
+    use HasFactory;
 }

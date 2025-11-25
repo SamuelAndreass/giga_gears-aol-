@@ -29,7 +29,7 @@ return new class extends Migration
             $table->time('open_time')->nullable();
             $table->time('close_time')->nullable();
             $table->enum('status', ['active', 'pending','suspend'])->default('pending');
-            $table->timestamp('verified_at');$table->foreignId('verified_by')->constrained('users', 'id');
+            $table->timestamp('verified_at')->nullable();$table->foreignId('verified_by')->nullable()->constrained('users', 'id')->default(null);
         });
     }
 

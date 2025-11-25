@@ -4,7 +4,7 @@ namespace Database\Seeders;
 
 use Illuminate\Database\Seeder;
 use App\Models\User;
-use App\Models\Store;
+use App\Models\SellerStore;
 
 class InitialUsersSeeder extends Seeder
 {
@@ -30,11 +30,11 @@ class InitialUsersSeeder extends Seeder
         ]);
 
         // Create associated store for this seller
-        $store = Store::factory()->create([
+        $store = SellerStore::factory()->create([
             'user_id' => $seller->id,
-            'name' => 'Demo Seller Store',
-            'address' => 'Jl. Demo No.1, Jakarta',
-            // avatar_path left null; you can set a dummy path if you copy image to storage
+            'store_name' => 'Demo Seller Store',
+            'store_address' => 'Jl. Demo No.1, Jakarta',
+            // store_logo left null; you can set a dummy path if you copy image to storage
         ]);
     }
 }

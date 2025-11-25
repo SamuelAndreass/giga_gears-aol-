@@ -21,7 +21,6 @@ class UserFactory extends Factory
             'email' => $email,
             'email_verified_at' => now(),
             'password' => Hash::make('password'), // default password: "password"
-            'phone' => $this->faker->optional()->phoneNumber(),
             'role' => 'customer', // default role, override when needed
             'remember_token' => Str::random(10),
         ];
