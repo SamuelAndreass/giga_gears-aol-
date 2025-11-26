@@ -1,19 +1,21 @@
-[] Create login and signup
+Overall work:
+[v] Create login and signup
 [v] configure routing, role restriction for any user
 [] Create admin page (crud customer, seler, product, discount, analytics)
-[] Create seller page (dashboard[v], add product[v], analytics[v], inbox[v], order view and update [v], store setup [v], balance [x])
+[v] Create seller page (dashboard[v], add product[v], analytics[v], inbox[v], order view and update [v], store setup [v], balance [x])
 [] Create customer page (home page, cart and order logic [v])
 [] Create payment (seller menyediakan tujuan pembayaran, 
                    customer mengirimkan bukti ke pembayaran ke sistem (validasi), 
                    product status completed = duit ditujukan ke seller )
-jadi ada 2 tujuan pembayaran 1 punya sistem satu punya seller (duit nya dipegang sistem dulu)
-
-ongoing update:
-[v] edit navbar di seller page (tujuan pagenya, sama profile)
-[]
-[] edit settings page seller
+    jadi ada 2 tujuan pembayaran 1 punya sistem satu punya seller (duit nya dipegang sistem dulu)
 [] test every page (make seeder debuging)
 
+ongoing update:
+[] configure controller and routing for admin
+[] configue all admin page (dashboard)
 
-optional:
+
+
+low priority:
 [] email verification
+[] forgot password

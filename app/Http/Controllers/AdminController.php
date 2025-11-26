@@ -17,9 +17,8 @@ class AdminController extends Controller
     //
     public function index(){
         $t_customer = User::where('role', 'customer')->count();
-        $t_seller = User::where('role','seller')->where('is_seller', true)->count();
-        $t_transaction = User::where('status', 'completed')->sum('total_amount');
-        $t_pending = Order::where('status','pending')->count();
+        $t_seller = SellerStore::count();
+        $t_transaction = Order::where('status', 'completed')->sum('total_amount');
         $recent_order = OrderItem::all()->take(5);
 
         $customer_growth = User::select(

@@ -4,17 +4,22 @@ use App\Http\Controllers\ProfileController;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\SellerController;
 use App\Http\Controllers\CartController;
-use App\Http\Controllers\ProductController;
-use App\Http\Controllers\Seller\SettingsController;
 
-Route::get('/', function () { return redirect()->route('products.index'); });
-Route::get('/products', [ProductController::class, 'index'])->name('products.index');
-Route::get('/products/featured', [ProductController::class, 'featured'])->name('products.featured');
-Route::get('/products/search', [ProductController::class, 'search'])->name('products.search');
-Route::get('/products/category/{categoryId}', [ProductController::class, 'byCategory'])->name('products.category');
-Route::get('/products/{id}', [ProductController::class, 'show'])->name('products.show');
-Route::post('/products/{id}/review', [ProductController::class, 'addReview'])->name('products.review');
-Route::get('/api/products/search', [ProductController::class, 'apiSearch'])->name('api.products.search');
+use App\Http\Controllers\Seller\SettingsController;
+use App\Http\Controllers\Auth\SocialAuthController;
+Route::redirect('/',  '/login');
+
+
+Route::get('login/google', [SocialAuthController::class, 'redirectToGoogle'])->name('login.google');
+Route::get('login/google/callback', [SocialAuthController::class, 'handleGoogleCallback']);
+
+//Route::get('/products', [ProductController::class, 'index'])->name('products.index');
+//Route::get('/products/featured', [ProductController::class, 'featured'])->name('products.featured');
+//Route::get('/products/search', [ProductController::class, 'search'])->name('products.search');
+//Route::get('/products/category/{categoryId}', [ProductController::class, 'byCategory'])->name('products.category');
+//Route::get('/products/{id}', [ProductController::class, 'show'])->name('products.show');
+//Route::post('/products/{id}/review', [ProductController::class, 'addReview'])->name('products.review');
+// Route::get('/api/products/search', [ProductController::class, 'apiSearch'])->name('api.products.search');
 
 // customer (basic user)
 Route::middleware(['auth'])->group(function(){

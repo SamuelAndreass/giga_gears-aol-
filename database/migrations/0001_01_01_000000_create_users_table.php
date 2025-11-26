@@ -21,6 +21,8 @@ return new class extends Migration
             $table->boolean('is_seller')->default(false);
             $table->string('role')->default('customer');
             $table->string('photoProfile')->nullable();
+            $table->string('google_id')->nullable()->unique();
+            $table->string('avatar')->nullable();
             $table->rememberToken();
             $table->timestamps();
         });
