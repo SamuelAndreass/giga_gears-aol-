@@ -41,6 +41,14 @@ class User extends Authenticatable
             }
         });
     }
+
+    public function scopeActive($q) {
+        return $q->where('status','active')
+                 ->where(function($s){
+                     $s->whereNull('suspended_until')
+                       ->orWhere('suspended_until','<',now());
+                 });
+    }
     public function customerProfile(){
         return $this->hasOne(CustomerProfile::class);
     }

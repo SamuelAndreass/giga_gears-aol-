@@ -28,7 +28,7 @@ return new class extends Migration
             $table->string('business_category')->nullable();
             $table->time('open_time')->nullable();
             $table->time('close_time')->nullable();
-            $table->enum('status', ['active', 'pending','suspend'])->default('pending');
+            $table->enum('status', ['active', 'inactive', 'banned'])->default('active');
             $table->timestamp('verified_at')->nullable();$table->foreignId('verified_by')->nullable()->constrained('users', 'id')->default(null);
         });
     }

@@ -23,6 +23,9 @@ return new class extends Migration
             $table->string('photoProfile')->nullable();
             $table->string('google_id')->nullable()->unique();
             $table->string('avatar')->nullable();
+            $table->enum('status', ['active', 'inactive', 'banned'])->default('active');
+            $table->timestamp('suspended_until')->nullable();
+            $table->text('ban_reason')->nullable();
             $table->rememberToken();
             $table->timestamps();
         });

@@ -15,7 +15,8 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->alias([
             'redirect.seller' => App\Http\Middleware\RedirectIfSeller::class,
             'ensure.seller' => App\Http\Middleware\EnsureIfSeller::class,
-            'ensure.admin' => App\Http\Middleware\EnsureUserIsAdmin::class
+            'ensure.admin' => App\Http\Middleware\EnsureUserIsAdmin::class,
+            'ensure.active' => \App\Http\Middleware\EnsureUserActive::class,
         ]);
 
  

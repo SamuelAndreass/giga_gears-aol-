@@ -10,7 +10,7 @@ use App\Models\OrderItem;
 use App\Models\Product;
 use App\Models\SellerStore;
 use Illuminate\Support\Facades\DB;
-
+use App\Models\Shipping;
 
 class AdminController extends Controller
 {
@@ -63,9 +63,139 @@ class AdminController extends Controller
         return view('admin.dashboard', compact('t_customer', 't_seller', 't_transaction', 't_pending', 'recent_order', 'labels', 'values', 'percentages', 'revenues', 'total', 'customerData', 'months'));
     }
 
-    public function viewUser(){
-        $user = CustomerProfile::with('users')->paginate(10);
-        return view('admin.customer-view', compact('user'));
+    public function viewUser(Request $request){
+        $query = User::with('customerProfile')
+            ->where('role', 'customer')
+            ->orderBy('created_at', 'desc');
+
+        // Search form GET (by ID, name, email, phone)
+        if ($search = $request->search) {
+            $query->where(function($q) use ($search) {
+                $q->where('id', 'like', "%$search%")
+                  ->orWhere('name', 'like', "%$search%")
+                  ->orWhere('email', 'like', "%$search%")
+                  ->orWhere('phone', 'like', "%$search%");
+            });
+        }
+
+        // Optional status filter (dropdown)
+        if ($status = $request->status) {
+            if ($status !== "all") {
+                $query->where('status', $status);
+            }
+        }
+
+        $customers = $query->paginate(10)->withQueryString();
+
+    }
+
+    public function updateUser(Request $request, User $user){
+        $request->validate([
+            'name'     => 'required|string|max:255',
+            'email'    => "required|email|unique:users,email,{$user->id}",
+            'phone'    => 'nullable|string|max:20',
+            'address'  => 'nullable|string',
+        ]);
+
+        $user->update([
+            'name'  => $request->name,
+            'email' => $request->email,
+            'phone' => $request->phone,
+        ]);
+
+        // update CustomerProfile
+        $user->customerProfile->update([
+            'address' => $request->address,
+        ]);
+
+        return back()->with('success', 'Customer updated successfully.');
+    }
+
+    public function updateStatus(Request $request, User $user){
+        $request->validate([
+            'status' => 'required|in:active,suspended,banned',
+        ]);
+
+        $user->status = $request->status;
+        $user->save();
+
+        return back()->with('success', "Status updated to {$user->status}");
+    }
+
+    public function sellerIndex(Request $request){
+        $query = SellerStore::with('user') // relasi owner user()
+            ->withCount('products') // jumlah produk aktif/semua tergantung relasi
+            ->orderBy('created_at','desc');
+
+        if ($q = $request->search) {
+            $query->where(function($qq) use ($q) {
+                $qq->where('id', 'like', "%{$q}%")
+                   ->orWhere('store_name', 'like', "%{$q}%")
+                   ->orWhereHas('user', fn($u)=> $u->where('name','like',"%{$q}%")->orWhere('email','like',"%{$q}%"));
+            });
+        }
+
+        $sellers = $query->paginate(10)->withQueryString();
+
+        return view('admin.seller', compact('sellers'));
+    }
+
+    public function updateSellerStatus(Request $request, SellerStore $seller){
+        $request->validate([
+            'status' => 'required|in:active,suspended,closed'
+        ]);
+
+        $seller->status = $request->status;
+        $seller->save();
+
+        // optional: dispatch job to hide products if suspended
+        return back()->with('success','Seller status updated.');
+    }
+
+    public function sellerJson(SellerStore $seller){
+        $seller->load(['user', 'products' => function($q){
+            $q->select('id','seller_store_id','name','price','stock','status');
+        }]);
+
+        // total revenue (sum of order_items.unit_price * quantity for seller's products)
+        $totalRevenue = DB::table('order_items')
+            ->join('products','order_items.product_id','products.id')
+            ->where('products.seller_store_id', $seller->id)
+            ->selectRaw('COALESCE(SUM(order_items.unit_price * order_items.quantity),0) as total')
+            ->value('total');
+
+        // total orders count for this seller (distinct orders containing seller's products)
+        $totalOrders = DB::table('order_items')
+            ->join('products','order_items.product_id','products.id')
+            ->where('products.seller_store_id', $seller->id)
+            ->distinct('order_items.order_id')
+            ->count('order_items.order_id');
+
+        return response()->json([
+            'id' => $seller->id,
+            'store_name' => $seller->store_name,
+            'avatar' => $seller->logo_url ?? null,
+            'owner_name' => $seller->user->name ?? '-',
+            'email' => $seller->user->email ?? '-',
+            'phone' => $seller->phone ?? '-',
+            'status' => $seller->status,
+            'created_at' => $seller->created_at->format('d M Y'),
+            'product_count' => $seller->products->count(),
+            'total_revenue' => (float) $totalRevenue,
+            'total_orders' => (int) $totalOrders,
+            'products' => $seller->products->map(function($p){
+                return [
+                    'id' => $p->id,
+                    'sku' => 'PRD-'.$p->id,
+                    'name' => $p->name,
+                    'price' => (float) $p->price,
+                    'stock' => $p->stock,
+                    'sold' => $p->sold_count ?? 0, // if you keep sold_count
+                    'status' => $p->status,
+                    'rating' => (float) ($p->rating ?? 0),
+                ];
+            }),
+        ]);
     }
 
     public function dataTransaction(){
@@ -87,12 +217,12 @@ class AdminController extends Controller
         return view('admin.data-transaction', compact('items'));
     }
 
-    public function shippingPage(){
+    public function shippingIndex(){
         $shippings = Shipping::paginate(5);
         return view('admin.shipping', compact('shippings'));
     }
 
-    public function addShipping(){
+    public function addShipping(Request $request){
         $validated = $request->validate([
             'name'               => 'required|string|max:255',
             'service_type'       => 'required|string|max:50',
@@ -156,11 +286,6 @@ class AdminController extends Controller
         $user->customerProfile->update(['phone' => $request->phone]);
 
         return back()->with('success', 'Berhasil merubah data.');
-    }
-
-    public function deleteUser($id){
-        User::where('id',$id)->delete();
-        return back()->with('success', 'Berhasil melakukan penghapusan.');
     }
 
 

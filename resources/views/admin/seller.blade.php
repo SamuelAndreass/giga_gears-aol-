@@ -9,7 +9,7 @@
   <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" rel="stylesheet">
   <link href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@400;600;700&display=swap" rel="stylesheet">
 
-  <link rel="stylesheet" href="css/admin.css">
+  <link rel="stylesheet" href="{{asset('css/admin.css')}}">
 
   <style>
     .admin-side {
@@ -73,20 +73,16 @@
     
     <aside class="admin-side" id="adminSidebar">
         <a href="dashboard.html" class="brand-link" aria-label="GigaGears">
-          <img src="../assets/gigagears-logo.png" alt="GigaGears" class="brand-logo">
+          <img src="{{asset('assets/logo GigaGears.png')}}" alt="GigaGears" class="brand-logo">
         </a>
 
         <nav class="nav flex-column nav-admin">
-          <a class="nav-link" href="dashboard.html"><i class="bi bi-grid-1x2"></i>Dashboard</a>
-          <a class="nav-link" href="customer.html"><i class="bi bi-people"></i>Data Customer</a>
-          <a class="nav-link active" href="seller.html"><i class="bi bi-person-badge"></i>Data Seller</a>
-          <a class="nav-link" href="promotion.html"><i class="bi bi-ticket-perforated"></i>Promotion/Voucher</a>
-          <a class="nav-link" href="transaction.html"><i class="bi bi-receipt"></i>Data Transaction</a>
-          <a class="nav-link" href="analytics.html"><i class="bi bi-bar-chart"></i>Analytics & Report</a>
-          <a class="nav-link" href="product.html"><i class="bi bi-box"></i>Products</a>
-          <a class="nav-link" href="inbox.html"><i class="bi bi-inbox"></i>Inbox</a>
-          <a class="nav-link" href="payment-verif.html"><i class="bi bi-shield-check"></i>Payment Verification</a>
-          <a class="nav-link" href="shipping.html"><i class="bi bi-truck"></i>Shipping Settings</a>
+          <a class="nav-link" href="{{ route('admin.dashboard') }}"><i class="bi bi-grid-1x2"></i>Dashboard</a>
+          <a class="nav-link" href="{{ route('admin.customers.index') }}"><i class="bi bi-people"></i>Data Customer</a>
+          <a class="nav-link" href="{{ route('admin.sellers.index') }}"><i class="bi bi-person-badge"></i>Data Seller</a>
+          <a class="nav-link" href="{{ route('admin.transactions.index') }}"><i class="bi bi-receipt"></i>Data Transaction</a>
+          <a class="nav-link" href="{{ route('admin.products.index') }}"><i class="bi bi-box"></i>Products</a>
+          <a class="nav-link active" href="{{ route('admin.shipping.index') }}"><i class="bi bi-truck"></i>Shipping Settings</a>
         </nav>
 
         <div class="mt-auto pb-4 px-3">
@@ -103,11 +99,10 @@
             </button>
             <div>
                 <div class="small opacity-75 mb-1">View and manage all registered sellers</div>
-                <h1 class="wc-title h3 mb-0">Seller Data</h1>
+                <h1 class="h3 mb-0">Seller Data</h1>
             </div>
           </div>
           <div class="d-flex align-items-center gap-2">
-            <button class="btn btn-light btn-sm"><i class="bi bi-bell"></i></button>
             <span class="badge-chip d-inline-flex align-items-center gap-2">
               <img src="https://ui-avatars.com/api/?name=Admin&background=random" class="rounded-circle" width="24" height="24" alt="A">
               Admin
@@ -115,27 +110,19 @@
           </div>
         </div>
 
-        <div class="gg-card p-3 p-md-4 mb-3">
-          <div class="row g-2 align-items-center">
-            <div class="col-12 col-md-6">
-              <div class="input-group">
-                <span class="input-group-text"><i class="bi bi-search"></i></span>
-                <input id="searchInput" type="text" class="form-control" placeholder="Search by ID, Store Name, Owner...">
+        <form action="{{ route('admin.sellers.index') }}" method="GET" ">
+          <div class="gg-card p-3 p-md-4 mb-3">
+            <div class="row g-2 align-items-center">
+              <div class="col-12 col-md-6">
+                <div class="input-group">
+                  <span class="input-group-text"><i class="bi bi-search"></i></span>
+                  <input id="searchInput" type="text" class="form-control" placeholder="Search by ID, Store Name, Owner...">
+                </div>
               </div>
             </div>
-            <div class="col-6 col-md-3">
-              <select id="statusFilter" class="form-select">
-                <option value="all">All status</option>
-                <option value="Active">Active</option>
-                <option value="Pending">Pending</option>
-                <option value="Suspended">Suspended</option>
-              </select>
-            </div>
-            <div class="col-6 col-md-3 text-end">
-              <button id="btnExport" class="btn btn-orange w-100"><i class="bi bi-upload me-1"></i> Export Data</button>
-            </div>
           </div>
-        </div>
+        </form>
+        
 
         <section class="gg-card p-0">
           <div class="table-responsive">
@@ -152,14 +139,53 @@
                   <th style="width:160px" class="text-end">Actions</th>
                 </tr>
               </thead>
-              <tbody id="tbodySellers"></tbody>
+              <tbody id="tbodySellers">
+                @forelse($sellers as $s)
+                <tr>
+                  <td class="fw-semibold text-muted">STORE-{{ $s->id }}</td>
+                  <td class="fw-bold">{{ $s->store_name }}</td>
+                  <td>{{ $s->user->name ?? '-' }}</td>
+                  <td><span class="text-warning text-opacity-75">{{ $s->user->email ?? '-' }}</span></td>
+                  <td>{{ $s->phone ?? '-' }}</td>
+                  <td class="text-center">{{ $s->products_count }}</td>
+                  <td><span class="badge-status {{ strtolower($s->status) }}">{{ ucfirst($s->status) }}</span></td>
+                  <td class="text-end text-nowrap">
+                    <div class="d-inline-flex align-items-center gap-1">
+                      <button class="btn btn-icon rounded-circle border-0 text-primary" title="View" onclick="openSellerView({{ $s->id }})">
+                        <i class="bi bi-eye-fill fs-5"></i>
+                      </button>
+
+                      {{-- Toggle status form --}}
+                      <form action="{{ route('admin.sellers.update-status', $s->id) }}" method="POST" class="d-inline">
+                        @csrf @method('PATCH')
+                        @if(strtolower($s->status) === 'active')
+                          <input type="hidden" name="status" value="suspended">
+                          <button class="btn btn-icon rounded-circle border-0 text-danger" title="Suspend">
+                            <i class="bi bi-dash-circle-fill fs-5"></i>
+                          </button>
+                        @else
+                          <input type="hidden" name="status" value="active">
+                          <button class="btn btn-icon rounded-circle border-0 text-success" title="Activate">
+                            <i class="bi bi-check-circle-fill fs-5"></i>
+                          </button>
+                        @endif
+                      </form>
+                    </div>
+                  </td>
+                </tr>
+                @empty
+                <tr>
+                  <td colspan="8" class="text-center text-muted py-4">No sellers found.</td>
+                </tr>
+                @endforelse
+              </tbody>
             </table>
           </div>
-
           <div class="d-flex justify-content-between align-items-center px-3 px-md-4 py-3 border-top">
-            <div class="small text-muted"><span id="countInfo">0</span> results</div>
-            <nav><ul class="pagination pagination-sm mb-0" id="pager"></ul></nav>
+            <div class="small text-muted">{{ $sellers->total() }} results</div>
+            <nav>{{ $sellers->links() }}</nav>
           </div>
+
         </section>
 
         <p class="text-center mt-4 foot small mb-0">© 2025 GigaGears. All rights reserved.</p>
@@ -256,6 +282,57 @@
   <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
   
   <script>
+    function currencyIdr(n){
+      return 'Rp' + Number(n || 0).toLocaleString('id-ID', {maximumFractionDigits:0});
+    }
+
+    function openSellerView(id){
+      fetch(`/admin/sellers/${id}/json`)
+        .then(r => {
+          if(!r.ok) throw new Error('Failed to fetch');
+          return r.json();
+        })
+        .then(data => {
+          // header
+          document.getElementById('vm-store-title').innerText = data.store_name;
+          document.getElementById('vm-store-name').innerText = data.store_name;
+          document.getElementById('vm-owner').innerText = data.owner_name;
+          document.getElementById('vm-email').innerText = data.email;
+          document.getElementById('vm-phone').innerText = data.phone;
+          document.getElementById('vm-status-badge').innerText = data.status;
+          document.getElementById('vm-status-badge').className = 'badge-status ' + (data.status || '').toLowerCase();
+
+          document.getElementById('vm-stat-prod').innerText = data.product_count;
+          // optional stat fields
+          document.getElementById('vm-total-revenue')?.innerText = currencyIdr(data.total_revenue);
+          document.getElementById('vm-total-orders')?.innerText = data.total_orders;
+
+          // avatar
+          const avatar = document.getElementById('vm-avatar');
+          if(data.avatar) avatar.src = data.avatar;
+          else avatar.src = '/placeholder-avatar.png';
+
+          // products list
+          const tbody = document.getElementById('vm-product-list');
+          tbody.innerHTML = data.products.map(p => `
+            <tr>
+              <td class="text-muted fw-bold">PRD-${p.id}</td>
+              <td class="fw-bold">${p.name}</td>
+              <td class="text-warning fw-bold">${currencyIdr(p.price)}</td>
+              <td>${p.stock}</td>
+              <td>${p.sold}</td>
+              <td><span class="${p.status.toLowerCase()==='active' ? 'text-success fw-bold small' : 'text-muted small'}">${p.status}</span></td>
+              <td class="text-end fw-bold"><i class="bi bi-star-fill text-warning me-1"></i>${p.rating.toFixed(1)}</td>
+            </tr>`).join('');
+
+          new bootstrap.Modal(document.getElementById('viewModal')).show();
+        })
+        .catch(err => {
+          console.error(err);
+          alert('Gagal memuat data seller.');
+        });
+    }
+
     const btnToggle = document.getElementById('btnToggle');
     const sidebar = document.getElementById('adminSidebar');
     const overlay = document.getElementById('sidebarOverlay');
@@ -269,106 +346,6 @@
     if(overlay) overlay.addEventListener('click', toggleSidebar);
   </script>
 
-  <script>
-    const sellers = Array.from({length: 30}).map((_,i)=> {
-        const statusPool = ["Active", "Active", "Active", "Pending", "Suspended"];
-        return {
-            id: "SELL-" + String(2001 + i),
-            storeName: ["TechnoWorld", "GigaByte Official", "Rumah IT", "Server Pro", "Mouse House", "Keyboard King", "Screen Master", "Audio Lab"][i%8],
-            owner: ["Andi Wijaya", "Budi Santoso", "Citra Lestari", "Doni Pratama", "Eka Putra", "Fajar Nugraha", "Gita Gutawa", "Hadi Pranoto"][i%8],
-            email: ["anditech@gmail.com", "budigiga@yahoo.com", "citra.it@gmail.com", "doni.srv@gmail.com", "eka.mouse@gmail.com", "fajar.key@gmail.com", "gita.screen@gmail.com", "hadi.audio@gmail.com"][i%8],
-            phone: "08293922" + String(1122 + i),
-            totalProduct: 120 + (i * 5),
-            status: statusPool[i % statusPool.length]
-        };
-    });
 
-    let state = { q:"", status:"all", page:1, pageSize:8 };
-    const el = id => document.getElementById(id);
-
-    const filterData = () => {
-      let arr = [...sellers];
-      if(state.q){
-        const q = state.q.toLowerCase();
-        arr = arr.filter(s => s.storeName.toLowerCase().includes(q) || s.owner.toLowerCase().includes(q) || s.id.toLowerCase().includes(q));
-      }
-      if(state.status !== "all") arr = arr.filter(s => s.status === state.status);
-      return arr;
-    };
-
-    function render(){
-      const data = filterData();
-      const total = data.length;
-      const pages = Math.max(1, Math.ceil(total/state.pageSize));
-      if(state.page > pages) state.page = pages;
-      const start = (state.page-1) * state.pageSize;
-      const rows = data.slice(start, start+state.pageSize);
-
-      el("tbodySellers").innerHTML = rows.map(s => {
-        const btnView = `<button class="btn btn-icon rounded-circle border-0 text-primary" data-action="view" data-id="${s.id}" title="View Detail"><i class="bi bi-eye-fill fs-5"></i></button>`;
-        let actions = '';
-        if(s.status === 'Active') actions = `${btnView} <button class="btn btn-icon rounded-circle border-0 text-danger" data-action="ban" data-id="${s.id}"><i class="bi bi-dash-circle-fill fs-5"></i></button>`;
-        else if(s.status === 'Pending') actions = `${btnView} <button class="btn btn-success btn-action-pill" data-action="approve" data-id="${s.id}">Approve</button>`;
-        else if(s.status === 'Suspended') actions = `${btnView} <button class="btn btn-outline-danger btn-action-pill" style="font-size:0.75rem" data-action="unblock" data-id="${s.id}">Unblock</button>`;
-
-        return `
-        <tr>
-          <td class="fw-semibold text-muted">${s.id}</td>
-          <td class="fw-bold">${s.storeName}</td>
-          <td>${s.owner}</td>
-          <td><span class="text-warning text-opacity-75">${s.email}</span></td>
-          <td>${s.phone}</td>
-          <td class="text-center">${s.totalProduct}</td>
-          <td><span class="badge-status ${s.status.toLowerCase()}">${s.status}</span></td>
-          <td class="text-end text-nowrap"><div class="d-inline-flex align-items-center gap-1">${actions}</div></td>
-        </tr>`;
-      }).join("");
-
-      el("countInfo").textContent = total;
-      let html = ''; for(let p=1; p<=pages; p++){ html += `<li class="page-item ${p===state.page?'active':''}"><a class="page-link" href="#" data-page="${p}">${p}</a></li>`; }
-      el("pager").innerHTML = html;
-    }
-
-    el("searchInput").addEventListener("input", e=>{ state.q=e.target.value.trim(); state.page=1; render(); });
-    el("statusFilter").addEventListener("change", e=>{ state.status=e.target.value; state.page=1; render(); });
-    el("pager").addEventListener("click", e=>{ const a = e.target.closest("a[data-page]"); if(!a) return; e.preventDefault(); state.page = +a.dataset.page; render(); });
-
-    document.addEventListener("click", e => {
-        const btn = e.target.closest("[data-action]");
-        if(!btn) return;
-        const id = btn.dataset.id; const action = btn.dataset.action;
-        const row = sellers.find(s => s.id === id);
-
-        if(action === "view") {
-            el("vm-store-title").innerText = row.storeName;
-            el("vm-store-name").innerText = row.storeName;
-            el("vm-owner").innerText = row.owner;
-            el("vm-email").innerText = row.email;
-            el("vm-phone").innerText = row.phone;
-            el("vm-bank-name").innerText = "a.n " + row.owner;
-            el("vm-avatar").src = `https://ui-avatars.com/api/?name=${encodeURIComponent(row.storeName)}&background=0D6EFD&color=fff&size=128`;
-            
-            const badge = el("vm-status-badge");
-            badge.className = `badge-status ${row.status.toLowerCase()}`;
-            badge.innerText = row.status;
-
-            let headerActions = '';
-            if(row.status === 'Active') headerActions = `<button class="btn btn-danger btn-sm"><i class="bi bi-slash-circle me-2"></i>Suspend</button>`;
-            else if(row.status === 'Pending') headerActions = `<button class="btn btn-success btn-sm"><i class="bi bi-check-circle me-2"></i>Approve</button>`;
-            else if(row.status === 'Suspended') headerActions = `<button class="btn btn-outline-danger btn-sm"><i class="bi bi-unlock me-2"></i>Unblock</button>`;
-            headerActions += `<button class="btn btn-primary btn-sm ms-2"><i class="bi bi-chat-dots-fill me-2"></i>Chat</button>`;
-            
-            el("vm-header-actions").innerHTML = headerActions;
-            el("vm-stat-prod").innerText = row.totalProduct;
-            new bootstrap.Modal("#viewModal").show();
-        }
-        
-        if(action === "approve") { if(confirm(`Approve store ${row.storeName}?`)) { row.status = "Active"; render(); } }
-        if(action === "ban") { if(confirm(`Suspend store ${row.storeName}?`)) { row.status = "Suspended"; render(); } }
-        if(action === "unblock") { if(confirm(`Unblock store ${row.storeName}?`)) { row.status = "Active"; render(); } }
-    });
-
-    render();
-  </script>
 </body>
 </html>

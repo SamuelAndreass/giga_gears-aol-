@@ -9,7 +9,7 @@
   <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" rel="stylesheet">
   <link href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@400;600;700&display=swap" rel="stylesheet">
 
-  <link rel="stylesheet" href="css/admin.css">
+  <link rel="stylesheet" href="{{asset('css/admin.css')}}">
 
   <style>
     /* --- Layout Fix (Sidebar & Mobile) --- */
@@ -61,20 +61,16 @@
     
     <aside class="admin-side" id="adminSidebar">
         <a href="dashboard.html" class="brand-link" aria-label="GigaGears">
-          <img src="../assets/gigagears-logo.png" alt="GigaGears" class="brand-logo">
+          <img src="{{assets('assets/logo GigaGears.png')}}" alt="GigaGears" class="brand-logo">
         </a>
 
         <nav class="nav flex-column nav-admin">
-          <a class="nav-link" href="dashboard.html"><i class="bi bi-grid-1x2"></i>Dashboard</a>
-          <a class="nav-link" href="customer.html"><i class="bi bi-people"></i>Data Customer</a>
-          <a class="nav-link" href="seller.html"><i class="bi bi-person-badge"></i>Data Seller</a>
-          <a class="nav-link" href="promotion.html"><i class="bi bi-ticket-perforated"></i>Promotion/Voucher</a>
-          <a class="nav-link" href="transaction.html"><i class="bi bi-receipt"></i>Data Transaction</a>
-          <a class="nav-link" href="analytics.html"><i class="bi bi-bar-chart"></i>Analytics & Report</a>
-          <a class="nav-link active" href="product.html"><i class="bi bi-box"></i>Products</a>
-          <a class="nav-link" href="inbox.html"><i class="bi bi-inbox"></i>Inbox</a>
-          <a class="nav-link" href="payment-verif.html"><i class="bi bi-shield-check"></i>Payment Verification</a>
-          <a class="nav-link" href="shipping.html"><i class="bi bi-truck"></i>Shipping Settings</a>
+          <a class="nav-link" href="{{ route('admin.dashboard') }}"><i class="bi bi-grid-1x2"></i>Dashboard</a>
+          <a class="nav-link" href="{{ route('admin.customers.index') }}"><i class="bi bi-people"></i>Data Customer</a>
+          <a class="nav-link" href="{{ route('admin.sellers.index') }}"><i class="bi bi-person-badge"></i>Data Seller</a>
+          <a class="nav-link" href="{{ route('admin.transactions.index') }}"><i class="bi bi-receipt"></i>Data Transaction</a>
+          <a class="nav-link" href="{{ route('admin.products.index') }}"><i class="bi bi-box"></i>Products</a>
+          <a class="nav-link active" href="{{ route('admin.shipping.index') }}"><i class="bi bi-truck"></i>Shipping Settings</a>
         </nav>
 
         <div class="mt-auto pb-4 px-3">
