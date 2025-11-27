@@ -60,8 +60,14 @@ Route::middleware(['auth','ensure.seller'])->prefix('seller')->name('seller.')->
 
 
 // admin
-Route::middleware(['auth:web', 'ensure.admin'])->group(function(){
-    Route::get('/admin/dashboard', []);
+Route::middleware(['auth:web', 'ensure.admin'])->prefix('admin')->group(function(){
+    Route::get('/dashboard', [AdminController::class, 'index'])->name('admin.dashboard');
+    Route::post('/add/shipping', [AdminController::class, 'addShipping'])->name('admin.shipping.store');
+    Route::put('/admin/shipping/{shipping}', [ShippingController::class, 'update'])->name('admin.shipping.update');
+    Route::get('/products', [AdminProductController::class, 'productIndex'])->name('admin.products.index');
+    Route::patch('/products/{product}/toggle-status', [AdminProductController::class, 'toggleStatus'])->name('admin.products.toggle-status');
+    Route::get('/admin/products/{product}/json', [AdminProductController::class, 'json'])->name('admin.products.json');
+
 });
 
 

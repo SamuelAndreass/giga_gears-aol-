@@ -13,7 +13,7 @@
   <link href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@400;600;700&display=swap" rel="stylesheet">
 
   <!-- App CSS -->
-  <link rel="stylesheet" href="css/styles.css">
+  <link rel="stylesheet" href="{{asset('css/styles.css')}}">
 </head>
 <body>
   <div class="container-fluid">

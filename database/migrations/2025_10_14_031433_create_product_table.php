@@ -15,7 +15,7 @@ return new class extends Migration {
             $table->json('features')->nullable(); $table->integer('stock')->default(0);
             $table->string('brand'); $table->decimal('rating', 3, 2)->default(0);
             $table->integer('review_count')->default(0); $table->boolean('is_featured')->default(false);
-            $table->timestamps(); $table->index(['category_id', 'is_featured']);$table->enum('status', ['pending', 'approved', 'rejected'])->default('pending');
+            $table->timestamps(); $table->index(['category_id', 'is_featured']);$table->enum('status', ['active', 'out of stock', 'inactive'])->default('pending');
             $table->timestamp('verified_at');$table->foreignId('verified_by')->constrained('users', 'id');
             $table->json('variants')->nullable();$table->string('SKU')->unique();
             $table->integer('weight')->nullable();$table->decimal('diameter', 8, 2)->nullable();

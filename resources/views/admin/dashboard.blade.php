@@ -12,6 +12,15 @@
   <link rel="stylesheet" href="css/admin.css">
 
   <style>
+
+    :root {
+    --pie-1: #4299e1;
+    --pie-2: #48bb78;
+    --pie-3: #facc15;
+    --pie-4: #7c3aed;
+    --pie-5: #ef4444;
+  }
+
     /* 1. Fix Lebar & Layout Sidebar */
     .admin-side {
         width: 280px; 
@@ -96,12 +105,12 @@
             </button>
             <div>
                 <div class="small opacity-75 mb-1">Welcome back 👋</div>
-                <h1 class="wc-title mb-0">Admin</h1>
+                <h1 class="mb-0">Admin</h1>
             </div>
           </div>
 
           <div class="d-flex align-items-center gap-2">
-            <button class="btn btn-light btn-sm"><i class="bi bi-bell"></i></button>
+            
             <span class="badge-chip d-inline-flex align-items-center gap-2">
               <span class="rounded-circle bg-white text-primary fw-bold d-inline-flex align-items-center justify-content-center" style="width:28px;height:28px">A</span>
               Admin
@@ -130,28 +139,22 @@
         </div>
 
         <div class="row g-3 mb-3">
-          <div class="col-12 col-md-6 col-xl-3">
+          <div class="col-12 col-md-6 col-xl-4">
             <div class="kpi">
               <span class="kpi-icon"><i class="bi bi-people"></i></span>
-              <div><div class="small text-muted-gg">Total Customer</div><div class="fs-4 fw-black">12,450</div></div>
+              <div><div class="small text-muted-gg">Total Customer</div><div class="fs-4 fw-black">{{ $t_customer}}</div></div>
             </div>
           </div>
-          <div class="col-12 col-md-6 col-xl-3">
+          <div class="col-12 col-md-6 col-xl-4">
             <div class="kpi">
               <span class="kpi-icon"><i class="bi bi-person-badge"></i></span>
-              <div><div class="small text-muted-gg">Total Sellers</div><div class="fs-4 fw-black">530</div></div>
+              <div><div class="small text-muted-gg">Total Sellers</div><div class="fs-4 fw-black">{{ $t_seller }}</div></div>
             </div>
           </div>
-          <div class="col-12 col-md-6 col-xl-3">
+          <div class="col-12 col-md-6 col-xl-4">
             <div class="kpi">
               <span class="kpi-icon"><i class="bi bi-cash-coin"></i></span>
-              <div><div class="small text-muted-gg">Total Transactions</div><div class="fs-4 fw-black">$98,500</div></div>
-            </div>
-          </div>
-          <div class="col-12 col-md-6 col-xl-3">
-            <div class="kpi">
-              <span class="kpi-icon"><i class="bi bi-hourglass-split"></i></span>
-              <div><div class="small text-muted-gg">Pending Verifications</div><div class="fs-4 fw-black">34</div></div>
+              <div><div class="small text-muted-gg">Total Transactions</div><div class="fs-4 fw-black">{{ $t_transaction }}</div></div>
             </div>
           </div>
         </div>
@@ -161,26 +164,31 @@
             <section class="gg-card p-3 p-md-4">
               <div class="d-flex justify-content-between align-items-center mb-2">
                 <div class="fw-semibold">Customer Growth</div>
-                <div class="btn-group btn-group-sm">
-                  <button class="btn btn-outline-secondary active">This Year</button>
-                  <button class="btn btn-outline-secondary">This Month</button>
+                  @if($customerData->isEmpty())
+                    <div class="text-muted small">No customer data available.</div>
+                  @else
+                  <div class="btn-group btn-group-sm">
+                    <button class="btn btn-outline-secondary disabled">This Year</button>
+                  </div>
                 </div>
-              </div>
-              <canvas id="chartGrowth" height="120"></canvas>
+              <canvas id="customerChart" height="120"></canvas>
             </section>
+                  @endif
           </div>
           <div class="col-12 col-xl-4">
             <section class="gg-card p-3 p-md-4">
               <div class="fw-semibold mb-2">Revenue by Category</div>
-              <canvas id="chartPie" height="180"></canvas>
-              <ul class="mt-3 mb-0 small">
-                <li><span style="display:inline-block;width:10px;height:10px;background:var(--pie-1);border-radius:3px;margin-right:8px"></span>Headset — 20%</li>
-                <li><span style="display:inline-block;width:10px;height:10px;background:var(--pie-2);border-radius:3px;margin-right:8px"></span>Laptop — 25%</li>
-                <li><span style="display:inline-block;width:10px;height:10px;background:var(--pie-3);border-radius:3px;margin-right:8px"></span>Accessories — 15%</li>
-                <li><span style="display:inline-block;width:10px;height:10px;background:var(--pie-4);border-radius:3px;margin-right:8px"></span>Software — 20%</li>
-                <li><span style="display:inline-block;width:10px;height:10px;background:var(--pie-5);border-radius:3px;margin-right:8px"></span>Mobile — 20%</li>
-              </ul>
+                <canvas id="revenueChart" height="180"></canvas>
+                  @if($revenues->isEmpty())
+                    <p class="text-center text-muted small mt-3 mb-0">No revenue data available.</p>
+                  @else
+                    <ul class="mt-3 mb-0 small">
+                      @foreach ($revenues as $rvn)
+                        <li><span style="display:inline-block;width:10px;height:10px;background:var(--pie-{{ $loop->index + 1 }});border-radius:3px;margin-right:8px"></span>{{ $rvn->category_name }} — {{ $percentages[$loop->index] }}%</li>
+                      @endforeach
+                    </ul>
             </section>
+                  @endif
           </div>
         </div>
 
@@ -205,35 +213,118 @@
 
     if(btnToggle) btnToggle.addEventListener('click', toggleSidebar);
     if(overlay) overlay.addEventListener('click', toggleSidebar);
-  </script>
+    
+    const ctx = document.getElementById('customerChart').getContext('2d');
+    const customerChart = new Chart(ctx, {
+        type: 'bar',
+        data: {
+            labels: @json($months),
+            datasets: [{
+                label: 'Customers',
+                data: @json($customerData),
+                borderWidth: 2,
+                borderColor: '#3b82f6',
+                backgroundColor: 'rgba(59, 130, 246, 0.25)',
+                borderRadius: 4,
+                maxBarThickness: 40,
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    ticks: {
+                        stepSize: 100
+                    }
+                }
+            }
+        }
+    });
+  
+    const revLabels = @json($labels ?? []);
+    const revValues = @json($values ?? []);
+    const revPercentages = @json($percentages ?? []);
 
-  <script>
-    const cssVar = (n)=>getComputedStyle(document.documentElement).getPropertyValue(n).trim();
+    // Jika tidak ada data, jangan inisialisasi chart
+    const revenueCanvas = document.getElementById('revenueChart');
+    const revenueList = document.querySelector('section.gg-card ul.mt-3'); // adjust jika struktur beda
 
-    // Bar
-    const g = document.getElementById('chartGrowth');
-    if (g){
-      const base = cssVar('--gg-primary') || '#1357FF';
-      new Chart(g, {
-        type:'bar',
-        data:{ labels:['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'],
-          datasets:[{ label:'Total Customer', data:[220,480,760,430,580,320,720,980,660,740,820,900],
-            backgroundColor: base+'33', borderColor: base, borderWidth: 1.5 }]},
-        options:{ plugins:{legend:{display:false}}, scales:{x:{grid:{display:false}}, y:{beginAtZero:true,ticks:{stepSize:200}}} }
-      });
+    if (!revenueCanvas) {
+        console.warn('revenueChart canvas not found');
+    } else if (!revValues.length || revValues.reduce((a,b)=>a+b,0) === 0) {
+        // Tampilkan empty-state visual (opsional)
+        revenueCanvas.style.display = 'none';
+        if (revenueList) {
+            revenueList.innerHTML = '<li class="text-muted">No revenue data.</li>';
+        }
+    } else {
+    // Pilih warna: (A) ambil dari CSS var --pie-1..5 jika tersedia, (B) fallback palette
+    const fallbackColors = [
+        'rgba(66,153,225,0.85)',
+        'rgba(72,187,120,0.85)',
+        'rgba(250,204,21,0.85)',
+        'rgba(124,58,237,0.85)',
+        'rgba(239,68,68,0.85)',
+        'rgba(99,102,241,0.85)',
+        'rgba(16,185,129,0.85)'
+    ];
+
+    // Try read CSS vars --pie-1..n
+    const cssColors = [];
+    for (let i = 1; i <= revLabels.length; i++) {
+        const varName = `--pie-${i}`;
+        const val = getComputedStyle(document.documentElement).getPropertyValue(varName).trim();
+        if (val) cssColors.push(val);
+        else break;
+    }
+    const palette = cssColors.length >= revLabels.length ? cssColors : fallbackColors;
+
+    const rctx = revenueCanvas.getContext('2d');
+    const revenueChart = new Chart(rctx, {
+        type: 'pie',
+        data: {
+            labels: revLabels,
+            datasets: [{
+                data: revValues,
+                backgroundColor: palette.slice(0, revLabels.length),
+                borderColor: '#ffffff',
+                borderWidth: 2
+            }]
+        },
+        options: {
+            responsive: true,
+            plugins: {
+                legend: { display: false }, // kita pakai legend HTML custom
+                tooltip: {
+                    callbacks: {
+                        label: function(ctx) {
+                            const idx = ctx.dataIndex;
+                            const value = ctx.parsed;
+                            const percent = revPercentages[idx] ?? ( (revValues.reduce((a,b)=>a+b,0) ? ((value / revValues.reduce((a,b)=>a+b,0)) * 100).toFixed(2) : 0) );
+                            const formatted = new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', maximumFractionDigits: 0 }).format(value);
+                            return `${ctx.label}: ${formatted} — ${percent}%`;
+                        }
+                    }
+                }
+            }
+        }
+    });
+
+    // Sync warna ke legend list (ul > li > span) — cocok dengan markup yang kamu pakai
+    if (revenueList) {
+        const items = revenueList.querySelectorAll('li');
+        items.forEach((li, i) => {
+            const dot = li.querySelector('span');
+            if (dot) {
+                dot.style.background = palette[i % palette.length];
+            }
+        });
+        }
     }
 
-    // Pie
-    const p = document.getElementById('chartPie');
-    if (p){
-      const colors = [cssVar('--pie-1'),cssVar('--pie-2'),cssVar('--pie-3'),cssVar('--pie-4'),cssVar('--pie-5')];
-      new Chart(p, {
-        type:'pie',
-        data:{ labels:['Headset','Laptop','Accessories','Software','Mobile'],
-          datasets:[{ data:[20,25,15,20,20], backgroundColor: colors, borderColor:'#fff', borderWidth:2 }]},
-        options:{ plugins:{legend:{display:false}} }
-      });
-    }
   </script>
+
 </body>
 </html>

@@ -7,9 +7,9 @@ use Illuminate\Database\Eloquent\Model;
 class CartItem extends Model
 {
     //
-    protected $fillable = ['product_id', 'qty', 'price', 'cart_id'];
+    protected $fillable = ['product_id', 'qty', 'price', 'cart_id', 'subtotal'];
 
-    protected $casts = ['qty' => 'integer', 'price' => 'decimal:2'];
+    protected $casts = ['qty' => 'integer', 'price' => 'decimal:2', 'subtotal' => 'decimal:2'];
 
     public function cart(){
         return $this->belongsTo(Cart::class);

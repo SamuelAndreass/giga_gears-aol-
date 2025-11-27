@@ -295,7 +295,7 @@
         input.type = isVisible ? "password" : "text";
 
         // ganti icon
-        icon.className = isVisible ? "bi bi-eye" : "bi bi-eye-slash";
+        icon = isVisible ? "bi bi-eye" : "bi bi-eye-slash";
     });
 </script>
 

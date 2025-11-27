@@ -12,8 +12,8 @@ Overall work:
 
 ongoing update:
 [] configure controller and routing for admin
-[] configue all admin page (dashboard)
-
+[] configure all admin page (dashboard)
+[] configure admin navbar
 
 
 low priority:

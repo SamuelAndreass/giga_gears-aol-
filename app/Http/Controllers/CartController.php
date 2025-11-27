@@ -37,6 +37,7 @@ class CartController extends Controller
                 'product_id' => $productId,
                 'qty' => $request->input('qty', 1),
                 'price' => $product->price,
+                'subtotal' => $product->price * $request->input('qty', 1),
             ]);
         }
 
