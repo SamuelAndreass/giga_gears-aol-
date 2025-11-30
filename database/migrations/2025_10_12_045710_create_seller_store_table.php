@@ -23,12 +23,13 @@ return new class extends Migration
             $table->string('store_description')->nullable();
             $table->string('province')->nullable();
             $table->string('city')->nullable();
+            $table->string('country')->nullable();
             $table->string('address')->nullable();
             $table->string('contact_number')->nullable();
             $table->string('business_category')->nullable();
             $table->time('open_time')->nullable();
             $table->time('close_time')->nullable();
-            $table->enum('status', ['active', 'inactive', 'banned'])->default('active');
+            $table->enum('status', ['active', 'inactive', 'banned', 'suspended'])->default('active');
             $table->timestamp('verified_at')->nullable();$table->foreignId('verified_by')->nullable()->constrained('users', 'id')->default(null);
         });
     }

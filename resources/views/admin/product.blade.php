@@ -56,12 +56,17 @@
   </style>
 </head>
 <body>
-  
+  @if(session('success'))
+    <div class="alert alert-success alert-dismissible fade show position-fixed top-0 end-0 m-3" role="alert" style="z-index: 1100;">
+      {{ session('success') }}
+      <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+    </div>
+  @endif
   <div class="container-fluid p-0 d-flex" style="min-height: 100vh; overflow-x: hidden;">
     
     <aside class="admin-side" id="adminSidebar">
         <a href="dashboard.html" class="brand-link" aria-label="GigaGears">
-          <img src="{{assets('assets/logo GigaGears.png')}}" alt="GigaGears" class="brand-logo">
+          <img src="{{asset('images/logo GigaGears.png')}}" alt="GigaGears" class="brand-logo">
         </a>
 
         <nav class="nav flex-column nav-admin">
@@ -69,13 +74,16 @@
           <a class="nav-link" href="{{ route('admin.customers.index') }}"><i class="bi bi-people"></i>Data Customer</a>
           <a class="nav-link" href="{{ route('admin.sellers.index') }}"><i class="bi bi-person-badge"></i>Data Seller</a>
           <a class="nav-link" href="{{ route('admin.transactions.index') }}"><i class="bi bi-receipt"></i>Data Transaction</a>
-          <a class="nav-link" href="{{ route('admin.products.index') }}"><i class="bi bi-box"></i>Products</a>
-          <a class="nav-link active" href="{{ route('admin.shipping.index') }}"><i class="bi bi-truck"></i>Shipping Settings</a>
+          <a class="nav-link active" href="{{ route('admin.products.index') }}"><i class="bi bi-box"></i>Products</a>
+          <a class="nav-link " href="{{ route('admin.shipping.index') }}"><i class="bi bi-truck"></i>Shipping Settings</a>
         </nav>
 
-        <div class="mt-auto pb-4 px-3">
-          <button class="btn btn-logout w-100"><i class="bi bi-box-arrow-right me-1"></i> Log Out</button>
+        <div class="mt-auto pb-4 px-3 pt-3 border-top">
+          <a class="btn btn-logout w-100" href="#" onclick="event.preventDefault();document.getElementById('logout-form').submit();"><i class="bi bi-box-arrow-right me-1"></i> Log Out</a>
         </div>
+        <form id="logout-form" action="{{ route('logout') }}" method="POST" style="display: none;">
+            @csrf
+        </form>
     </aside>
 
     <main class="main-wrap flex-grow-1" style="min-width: 0;">
@@ -91,7 +99,6 @@
             </div>
           </div>
           <div class="d-flex align-items-center gap-2">
-            <button class="btn btn-light btn-sm"><i class="bi bi-bell"></i></button>
             <span class="badge-chip d-inline-flex align-items-center gap-2">
               <img src="https://ui-avatars.com/api/?name=Admin&background=random" class="rounded-circle" width="24" height="24">
               Admin
@@ -99,17 +106,19 @@
           </div>
         </div>
 
-        <div class="gg-card p-3 p-md-4 mb-3">
-          <div class="row g-2 align-items-center">
-            <div class="col-12 col-md-5">
-              <div class="input-group">
-                <input id="searchInput" type="text" class="form-control" placeholder="Search products.." value="{{ request('search') }}">
-                <button class="btn btn-primary"><i class="bi bi-search"></i></button>
+        <form action="{{ route('admin.products.index') }}" method="GET">
+          <div class="gg-card p-3 p-md-4 mb-3">
+            <div class="row g-2 align-items-center">
+              <div class="col-12 col-md-5">
+                <div class="input-group">
+                  <input id="searchInput" type="text" name="search" class="form-control" placeholder="Search products.." value="{{ request('search') }}">
+                  <button class="btn btn-primary"><i class="bi bi-search"></i></button>
+                </div>
               </div>
+              
             </div>
-
           </div>
-        </div>
+        </form>
 
         <section class="gg-card p-0">
           <div class="table-responsive">
@@ -159,7 +168,7 @@
 
                       {{-- PRICE --}}
                       <td class="fw-bold">
-                          Rp{{ number_format($p->price, 0, ',', '.') }}
+                          Rp{{ number_format($p->original_price, 0, ',', '.') }}
                       </td>
 
                       {{-- STOCK --}}
@@ -170,7 +179,7 @@
                       {{-- STATUS --}}
                       <td>
                           <span class="badge-status {{ strtolower(str_replace(' ', '-', $p->status)) }}">
-                              {{ $p->status }}
+                              {{ ucfirst($p->status) }}
                           </span>
                       </td>
 
@@ -185,11 +194,11 @@
                           </button>
 
                           {{-- BAN / UNBAN --}}
-                          @if ($p->status === 'inactive')
+                          @if ($p->status === 'banned')
                               <form method="POST" action="{{ route('admin.products.toggle-status', $p->id) }}" class="d-inline">
                                   @csrf
                                   @method('PATCH')
-                                  <button class="btn p-0 border-0 text-success ms-2" title="Activate Product">
+                                  <button class="btn p-0 border-0 text-success ms-2" title="Activate Product" type="submit">
                                       <i class="bi bi-check-circle-fill fs-5"></i>
                                   </button>
                               </form>
@@ -197,7 +206,7 @@
                               <form method="POST" action="{{ route('admin.products.toggle-status', $p->id) }}" class="d-inline">
                                   @csrf
                                   @method('PATCH')
-                                  <button class="btn p-0 border-0 text-danger ms-2" title="Inactive Product">
+                                  <button class="btn p-0 border-0 text-danger ms-2" title="Inactive Product" type="submit">
                                       <i class="bi bi-slash-circle-fill fs-5"></i>
                                   </button>
                               </form>
@@ -210,8 +219,8 @@
             </table>
           </div>
           <div class="d-flex justify-content-between align-items-center px-3 px-md-4 py-3 border-top">
-            <div class="small text-muted"><span id="countInfo">0</span> results</div>
-            <nav><ul class="pagination pagination-sm mb-0" id="pager"></ul></nav>
+            <div class="small text-muted"><span id="countInfo">{{ $products->total() }}</span> results</div>
+            {{ $products->links() }}
           </div>
         </section>
 
@@ -235,8 +244,8 @@
                     <div class="mt-3 text-center">
                          <div class="fw-bold mb-1">Rating</div>
                          <div class="text-warning">
-                            <i class="bi bi-star-fill"></i> ... 
-                            (<span id="vm-rating-number">0.0</span>)
+                            <i class="bi bi-star-fill"></i>
+                            <span id="vm-rating-number">0.0</span>
                          </div>
                     </div>
                 </div>
@@ -258,7 +267,6 @@
             </div>
         </div>
         <div class="modal-footer bg-light">
-            <button class="btn btn-outline-danger me-auto" onclick="confirm('Ban this product for violation?')"><i class="bi bi-slash-circle me-2"></i>Inactive Product</button>
             <button class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
         </div>
       </div>
@@ -293,18 +301,21 @@
                 // IMAGE
                 if (p.image) {
                     document.querySelector('#vm-img').style.backgroundImage = `url('${p.image}')`;
+                    document.querySelector('#vm-img i').style.display = 'none';
+                } else {
+                    document.querySelector('#vm-img').style.backgroundImage = 'none';
+                    document.querySelector('#vm-img i').style.display = 'block';
                 }
 
                 // BASIC FIELDS
                 document.querySelector('#vm-name').textContent = p.name;
                 document.querySelector('#vm-sku').textContent = p.sku;
                 document.querySelector('#vm-cat').textContent = p.category;
-                document.querySelector('#vm-price').textContent = 
-                    "Rp" + Number(p.price).toLocaleString('id-ID');
+                document.querySelector('#vm-price').textContent = "Rp" + Number(p.price).toLocaleString('id-ID');
                 document.querySelector('#vm-stock').textContent = p.stock + " Units";
                 document.querySelector('#vm-seller').textContent = p.seller;
-                document.querySelector('#vm-status').textContent = p.status;
-
+                document.querySelector('#vm-status').textContent = p.status.slice(0,1).toUpperCase() + p.status.slice(1);
+                
                 // DESCRIPTION
                 document.querySelector('#vm-desc').textContent = p.description ?? '-';
 

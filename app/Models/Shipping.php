@@ -16,6 +16,10 @@ class Shipping extends Model
         return $query->where('status', 'active');
     }
 
+    public function shiporder(){
+        return $this->hasMany(ShippingOrder::class);
+    }
+
     public function getDeliveryRangeAttribute(){
         if ($this->min_delivery_days && $this->max_delivery_days) {
             return "{$this->min_delivery_days}–{$this->max_delivery_days} days";

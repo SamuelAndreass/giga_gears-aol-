@@ -15,9 +15,8 @@ class EnsureIfSeller
      */
     public function handle(Request $request, Closure $next): Response
     {
-        $user = Auth::user();
-        if(!$user || !$user->is_seller){
-            return redirect()->route('dashboard')->with('message', 'anda tidak memiliki akses ke halaman ini,');
+        if(!Auth::check() || Auth::user()->role != 'seller'){
+            return redirect()->route('login')->with('message', 'anda tidak memiliki akses ke halaman ini,');
         }
         return $next($request);
     }

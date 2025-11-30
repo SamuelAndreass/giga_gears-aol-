@@ -2,9 +2,8 @@
 
 namespace Database\Factories;
 
-use App\Models\Category;
 use Illuminate\Database\Eloquent\Factories\Factory;
-use Illuminate\Support\Str;
+use App\Models\Category;
 
 class CategoryFactory extends Factory
 {
@@ -12,11 +11,10 @@ class CategoryFactory extends Factory
 
     public function definition()
     {
-        $name = $this->faker->unique()->words(2, true);
         return [
-            'name' => ucfirst($name),
-            'slug' => Str::slug($name) . '-' . $this->faker->unique()->numberBetween(1, 9999),
-            'description' => $this->faker->optional()->sentence(),
+            'name' => $this->faker->unique()->word(),
+            'slug' => $this->faker->unique()->slug(),
+            'description' => $this->faker->sentence(),
         ];
     }
 }

@@ -2,8 +2,9 @@
 
 namespace Database\Factories;
 
-use App\Models\SellerStore;
 use Illuminate\Database\Eloquent\Factories\Factory;
+use App\Models\SellerStore;
+use App\Models\User;
 
 class SellerStoreFactory extends Factory
 {
@@ -12,10 +13,12 @@ class SellerStoreFactory extends Factory
     public function definition()
     {
         return [
-            'user_id' => null,
+            'user_id' => User::where('role','seller')->inRandomOrder()->first()->id ?? null,
             'store_name' => $this->faker->company(),
-            'store_address' => $this->faker->address(),
-            'store_logo' => null,
+            'store_logo' => $this->faker->imageUrl(200,200,'business'),
+            'store_phone' => $this->faker->phoneNumber(),
+            'status' => 'active',
+            'created_at' => now()->subDays($this->faker->numberBetween(0, 300)),
         ];
     }
 }

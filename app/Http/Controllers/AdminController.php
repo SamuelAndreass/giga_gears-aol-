@@ -41,10 +41,10 @@ class AdminController extends Controller
             $customerData[] = $customer_growth[$index + 1] ?? 0;
         }
 
-        $revenues = DB::table('orders')
-        ->join('products', 'orders.product_id', '=', 'products.id')
+        $revenues = DB::table('order_items')
+        ->join('products', 'order_items.product_id', '=', 'products.id')
         ->join('categories', 'products.category_id', '=', 'categories.id')
-        ->select('categories.id as category_id', 'categories.name as category_name', DB::raw('SUM(orders.total_amount) as total_revenue'))
+        ->select('categories.id as category_id', 'categories.name as category_name', DB::raw('SUM(order_items.subtotal) as total_revenue'))
         ->groupBy('categories.id', 'categories.name')
         ->orderByDesc('total_revenue')
         ->get();
@@ -60,7 +60,7 @@ class AdminController extends Controller
         $percentages = collect($values)->map(fn($v) => $total > 0 ? round(($v / $total) * 100, 2) : 0)->toArray();
 
 
-        return view('admin.dashboard', compact('t_customer', 't_seller', 't_transaction', 't_pending', 'recent_order', 'labels', 'values', 'percentages', 'revenues', 'total', 'customerData', 'months'));
+        return view('admin.dashboard', compact('t_customer', 't_seller', 't_transaction', 'customer_growth' ,'recent_order', 'labels', 'values', 'percentages', 'revenues', 'total', 'customerData', 'months'));
     }
 
     public function viewUser(Request $request){
@@ -73,8 +73,7 @@ class AdminController extends Controller
             $query->where(function($q) use ($search) {
                 $q->where('id', 'like', "%$search%")
                   ->orWhere('name', 'like', "%$search%")
-                  ->orWhere('email', 'like', "%$search%")
-                  ->orWhere('phone', 'like', "%$search%");
+                  ->orWhere('email', 'like', "%$search%");
             });
         }
 
@@ -86,29 +85,46 @@ class AdminController extends Controller
         }
 
         $customers = $query->paginate(10)->withQueryString();
-
+        return view('admin.customer', compact('customers'));
+    }
+    public function userJson($id)
+    {
+        $user =User::with('customerProfile')->find($id);
+        return response()->json([
+            'id' => $user->id,
+            'name' => $user->name,
+            'email' => $user->email,
+            'phone' => $user->customerProfile->phone ?? '',
+            'address' => $user->customerProfile->address ?? '',
+            'status' => $user->status,
+        ]);
     }
 
     public function updateUser(Request $request, User $user){
         $request->validate([
             'name'     => 'required|string|max:255',
             'email'    => "required|email|unique:users,email,{$user->id}",
-            'phone'    => 'nullable|string|max:20',
+            'phone'    => 'nullable|string|regex:/^[0-9+\-\s]{8,20}$/',
             'address'  => 'nullable|string',
         ]);
 
         $user->update([
             'name'  => $request->name,
             'email' => $request->email,
-            'phone' => $request->phone,
         ]);
 
+        $profile = $user->customerProfile;
         // update CustomerProfile
-        $user->customerProfile->update([
-            'address' => $request->address,
-        ]);
+        if($request->filled('phone')){
+            $profile->phone = $request->phone;
+        }
 
-        return back()->with('success', 'Customer updated successfully.');
+         if($request->filled('address')){
+            $profile->address = $request->address;
+        }
+
+        $profile->save();
+        return response()->json(['status' => 'ok', 'message' => 'User updated successfully.', 'user' => $user]);
     }
 
     public function updateStatus(Request $request, User $user){
@@ -122,9 +138,22 @@ class AdminController extends Controller
         return back()->with('success', "Status updated to {$user->status}");
     }
 
+    public function updateStatusSeller(Request $request, $storeId){
+        $request->validate([
+            'status' => 'required|in:active,suspended,banned',
+        ]);
+        
+
+        $seller = SellerStore::findOrFail($storeId);
+        $seller->status = $request->status;
+        $seller->save();
+
+        return back()->with('success', "Status updated to {$seller->status}");
+    }
+
     public function sellerIndex(Request $request){
-        $query = SellerStore::with('user') // relasi owner user()
-            ->withCount('products') // jumlah produk aktif/semua tergantung relasi
+        $query = SellerStore::with('user')
+            ->withCount('products')
             ->orderBy('created_at','desc');
 
         if ($q = $request->search) {
@@ -154,14 +183,14 @@ class AdminController extends Controller
 
     public function sellerJson(SellerStore $seller){
         $seller->load(['user', 'products' => function($q){
-            $q->select('id','seller_store_id','name','price','stock','status');
+            $q->select('id','seller_store_id','name','original_price','stock','status', 'rating');
         }]);
 
         // total revenue (sum of order_items.unit_price * quantity for seller's products)
         $totalRevenue = DB::table('order_items')
             ->join('products','order_items.product_id','products.id')
             ->where('products.seller_store_id', $seller->id)
-            ->selectRaw('COALESCE(SUM(order_items.unit_price * order_items.quantity),0) as total')
+            ->selectRaw('COALESCE(SUM(order_items.subtotal),0) as total')
             ->value('total');
 
         // total orders count for this seller (distinct orders containing seller's products)
@@ -171,24 +200,33 @@ class AdminController extends Controller
             ->distinct('order_items.order_id')
             ->count('order_items.order_id');
 
+        if($seller->city && $seller->country){
+                $location = $seller->city . ', ' . $seller->country;
+        }else{
+                $location = $seller->store_address ?? '-';
+        }
+
         return response()->json([
             'id' => $seller->id,
             'store_name' => $seller->store_name,
-            'avatar' => $seller->logo_url ?? null,
+            'avatar' => $seller->store_logo ?? null,
+            'banner' => $seller->store_banner ?? null,
+            'location' => $location,
             'owner_name' => $seller->user->name ?? '-',
             'email' => $seller->user->email ?? '-',
             'phone' => $seller->phone ?? '-',
             'status' => $seller->status,
-            'created_at' => $seller->created_at->format('d M Y'),
+            'since_year' => $seller->created_at->format('Y'),
             'product_count' => $seller->products->count(),
             'total_revenue' => (float) $totalRevenue,
             'total_orders' => (int) $totalOrders,
+            
             'products' => $seller->products->map(function($p){
                 return [
                     'id' => $p->id,
                     'sku' => 'PRD-'.$p->id,
                     'name' => $p->name,
-                    'price' => (float) $p->price,
+                    'price' => (float) $p->original_price,
                     'stock' => $p->stock,
                     'sold' => $p->sold_count ?? 0, // if you keep sold_count
                     'status' => $p->status,
@@ -198,20 +236,46 @@ class AdminController extends Controller
         ]);
     }
 
+    public function sellerProductsJson(SellerStore $seller, Request $request)
+    {
+        $perPage = (int) $request->get('per_page', 10);
+
+        $products = $seller->products()
+            ->select('id','seller_store_id','name','original_price','stock','status','rating')
+            ->orderBy('id','desc')
+            ->paginate($perPage);
+
+        $products->getCollection()->transform(function($p){
+            return [
+                'id' => $p->id,
+                'sku' => 'PRD-' . $p->id,
+                'name' => $p->name,
+                'price' => (float) $p->original_price,
+                'stock' => $p->stock,
+                'sold' => $p->sold_count ?? 0,
+                'status' => $p->status,
+                'rating' => (float) ($p->rating ?? 0),
+            ];
+        });
+
+        return response()->json($products);
+    }
+
+
     public function dataTransaction(){
         // filter opsional (search, status, date range)
         $q = OrderItem::query();
 
         //eager load ke relasi terkait
         $q->with([
-            'order:id,user_id,order_number,total_amount,payment_method,status,order_date',
+            'order:id,user_id,order_code,total_amount,status,order_date',
             'order.user:id,name,email',
-            'product:id,name,price,seller_store_id',
-            'product.sellerStore:id,name' // pastikan relasi bernama sellerStore
+            'product:id,name,original_price,seller_store_id',
+            'product.sellerStore:id,store_name' // pastikan relasi bernama sellerStore
         ]);
 
         // Pilih kolom minimal dari order_items agar lebih efisien
-        $q->select('id', 'order_id', 'product_id', 'qty', 'price');
+        $q->select('id', 'order_id', 'product_id', 'qty', 'price', 'subtotal');
         $items = $q->latest('created_at')->paginate(25)->withQueryString();
 
         return view('admin.data-transaction', compact('items'));
@@ -274,20 +338,6 @@ class AdminController extends Controller
         ]);
     }
 
-    public function userUpdate(Request $request, $id){
-        $request->validate([
-            'name' => 'required|string|max:255',
-            'email' => 'required|email|unique:users',
-            'phone' => 'required|regex:/^(?:\+62|62|0)8[1-9][0-9]{6,10}$/|unique:customer_profiles',
-        ]);
-
-        $user = auth()->user();
-        $user->update(['name' => $request->name, 'phone' => $request->phone]);
-        $user->customerProfile->update(['phone' => $request->phone]);
-
-        return back()->with('success', 'Berhasil merubah data.');
-    }
-
 
     public function sellerView(){
         $seller = SellerStore::with('user')->paginate(10);
@@ -304,35 +354,40 @@ class AdminController extends Controller
 
         // Optional: Search
         if ($search = $request->search) {
-            $query->where('name', 'like', "%{$search}%");
+            $query->where('name', 'like', "%{$search}%")
+                  ->orWhere('sku', 'like', "%{$search}%")
+                  ->orWhereHas('sellerStore', fn($q) => $q->where('store_name', 'like', "%{$search}%"));
         }
 
-        $products = $query->paginate(12);
+        $products = $query->paginate(6);
 
-        return view('admin.products.index', compact('products'));
+        return view('admin.product', compact('products'));
     }
 
-    public function toggleStatus(Product $product){
-        $product->status = $product->status === 'Active' ? 'Inactive' : 'Active';
-        $product->save();
+        public function toggleStatus(Product $product)
+        {
+            $product->status = strtolower($product->status) === 'active' ? 'banned' : 'active';
+            $product->save();
 
-        return back()->with('success', 'Product status updated.');
-    }
+            return back()->with('success', 'Product status updated.');
+        }
 
-    public function json(Product $product){
+
+    public function productJson(Product $product){
         $product->load(['sellerStore', 'category']);
 
+        $imageUrl = $product->images; 
         return response()->json([
             'id' => $product->id,
             'name' => $product->name,
             'sku' => $product->sku ?? ('PRD-'.$product->id),
-            'price' => $product->price,
+            'price' => $product->original_price,
             'stock' => $product->stock,
             'description' => $product->description,
             'status' => $product->status,
-            'image' => $product->image_url ?? null,
+            'image' => $imageUrl,
             'category' => $product->category->name ?? '-',
-            'seller' => $product->sellerStore->name ?? 'Unknown Seller',
+            'seller' => $product->sellerStore->store_name ?? 'Unknown Seller',
             'rating' => number_format($product->rating ?? 0, 1),
         ]);
     }

@@ -9,7 +9,7 @@
   <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" rel="stylesheet">
   <link href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@400;600;700&display=swap" rel="stylesheet">
 
-  <link rel="stylesheet" href="css/admin.css">
+  <link rel="stylesheet" href="{{ asset('css/admin.css') }}">
 
   <style>
 
@@ -69,25 +69,35 @@
   </style>
 </head>
 <body>
-  
+  @if(session('success'))
+    <div class="alert alert-success alert-dismissible fade show position-fixed top-0 end-0 m-3" role="alert" style="z-index: 1100;">
+      {{ session('success') }}
+      <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+    </div>
+  @endif
   <div class="container-fluid p-0 d-flex" style="min-height: 100vh; overflow-x: hidden;">
     
     <aside class="admin-side" id="adminSidebar">
-        <a href="dashboard.html" class="brand-link" aria-label="GigaGears">
-          <img src="{{assets('assets/logo GigaGears.png')}}" alt="GigaGears" class="brand-logo">
+        <a href="{{ route('admin.customers.index') }}" class="brand-link" aria-label="GigaGears">
+          <img src="{{asset('images/logo GigaGears.png')}}" alt="GigaGears" class="brand-logo">
         </a>
 
         <nav class="nav flex-column nav-admin">
-          <a class="nav-link" href="{{ route('admin.dashboard') }}"><i class="bi bi-grid-1x2"></i>Dashboard</a>
+          <a class="nav-link active" href="{{ route('admin.dashboard') }}"><i class="bi bi-grid-1x2"></i>Dashboard</a>
           <a class="nav-link" href="{{ route('admin.customers.index') }}"><i class="bi bi-people"></i>Data Customer</a>
           <a class="nav-link" href="{{ route('admin.sellers.index') }}"><i class="bi bi-person-badge"></i>Data Seller</a>
           <a class="nav-link" href="{{ route('admin.transactions.index') }}"><i class="bi bi-receipt"></i>Data Transaction</a>
           <a class="nav-link" href="{{ route('admin.products.index') }}"><i class="bi bi-box"></i>Products</a>
-          <a class="nav-link active" href="{{ route('admin.shipping.index') }}"><i class="bi bi-truck"></i>Shipping Settings</a>
+          <a class="nav-link" href="{{ route('admin.shipping.index') }}"><i class="bi bi-truck"></i>Shipping Settings</a>
         </nav>
 
         <div class="mt-auto pb-4 px-3">
-          <button class="btn btn-logout w-100"><i class="bi bi-box-arrow-right me-1"></i> Log Out</button>
+           <a href="#" class="btn btn-logout w-100" onclick="event.preventDefault();document.getElementById('logout-form').submit();">
+              <i class="bi bi-box-arrow-right me-1"></i> Log Out
+          </a>
+          <form id="logout-form" action="{{ route('logout') }}" method="POST" class="d-none">
+              @csrf
+          </form>
         </div>
     </aside>
 
@@ -114,26 +124,28 @@
           </div>
         </div>
 
+        <!-- Notification & Activity Log 
         <div class="gg-card p-3 p-md-4 mb-3">
           <div class="fw-semibold mb-2">Notifikasi & Activity Log</div>
-          <div class="row g-2">
-            <div class="col-12 col-md-6">
-              <div class="alert alert-warning d-flex align-items-center gap-2 mb-0">
-                <i class="bi bi-exclamation-triangle-fill"></i>
-                <b>5</b> new products pending verification
-                <button class="btn btn-sm btn-outline-secondary ms-auto">Verif</button>
+            <div class="row g-2">
+              <div class="col-12 col-md-6">
+                <div class="alert alert-warning d-flex align-items-center gap-2 mb-0">
+                  <i class="bi bi-exclamation-triangle-fill"></i>
+                  <b>5</b> new products pending verification
+                  <button class="btn btn-sm btn-outline-secondary ms-auto">Verif</button>
+                </div>
+              </div>
+            
+              <div class="col-12 col-md-6">
+                <div class="alert alert-danger d-flex align-items-center gap-2 mb-0">
+                  <i class="bi bi-exclamation-octagon-fill"></i>
+                  <b>2</b> withdraw requests awaiting approval
+                  <button class="btn btn-sm btn-outline-secondary ms-auto">Verif</button>
+                </div>
               </div>
             </div>
-            <div class="col-12 col-md-6">
-              <div class="alert alert-danger d-flex align-items-center gap-2 mb-0">
-                <i class="bi bi-exclamation-octagon-fill"></i>
-                <b>2</b> withdraw requests awaiting approval
-                <button class="btn btn-sm btn-outline-secondary ms-auto">Verif</button>
-              </div>
-            </div>
-          </div>
         </div>
-
+        -->
         <div class="row g-3 mb-3">
           <div class="col-12 col-md-6 col-xl-4">
             <div class="kpi">
@@ -160,21 +172,24 @@
             <section class="gg-card p-3 p-md-4">
               <div class="d-flex justify-content-between align-items-center mb-2">
                 <div class="fw-semibold">Customer Growth</div>
-                  @if($customerData->isEmpty())
+                  @if($customer_growth->isEmpty())
                     <div class="text-muted small">No customer data available.</div>
                   @else
                   <div class="btn-group btn-group-sm">
                     <button class="btn btn-outline-secondary disabled">This Year</button>
                   </div>
                 </div>
-              <canvas id="customerChart" height="120"></canvas>
+              <div style="height: 240px;">
+                  <canvas id="customerChart" height="120"></canvas>
+              </div>
+              
             </section>
                   @endif
           </div>
           <div class="col-12 col-xl-4">
             <section class="gg-card p-3 p-md-4">
               <div class="fw-semibold mb-2">Revenue by Category</div>
-                <canvas id="revenueChart" height="180"></canvas>
+                <canvas id="revenueChart" height="50"></canvas>
                   @if($revenues->isEmpty())
                     <p class="text-center text-muted small mt-3 mb-0">No revenue data available.</p>
                   @else

@@ -68,26 +68,36 @@
   </style>
 </head>
 <body>
-  
+  @if(session('success'))
+    <div class="alert alert-success alert-dismissible fade show position-fixed top-0 end-0 m-3" role="alert" style="z-index: 1100;">
+      {{ session('success') }}
+      <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+    </div>
+  @endif
   <div class="container-fluid p-0 d-flex" style="min-height: 100vh; overflow-x: hidden;">
     
     <aside class="admin-side" id="adminSidebar">
         <a href="dashboard.html" class="brand-link" aria-label="GigaGears">
-          <img src="{{asset('assets/logo GigaGears.png')}}" alt="GigaGears" class="brand-logo">
+          <img src="{{asset('images/logo GigaGears.png')}}" alt="GigaGears" class="brand-logo">
         </a>
 
         <nav class="nav flex-column nav-admin">
           <a class="nav-link" href="{{ route('admin.dashboard') }}"><i class="bi bi-grid-1x2"></i>Dashboard</a>
           <a class="nav-link" href="{{ route('admin.customers.index') }}"><i class="bi bi-people"></i>Data Customer</a>
-          <a class="nav-link" href="{{ route('admin.sellers.index') }}"><i class="bi bi-person-badge"></i>Data Seller</a>
+          <a class="nav-link active" href="{{ route('admin.sellers.index') }}"><i class="bi bi-person-badge"></i>Data Seller</a>
           <a class="nav-link" href="{{ route('admin.transactions.index') }}"><i class="bi bi-receipt"></i>Data Transaction</a>
           <a class="nav-link" href="{{ route('admin.products.index') }}"><i class="bi bi-box"></i>Products</a>
-          <a class="nav-link active" href="{{ route('admin.shipping.index') }}"><i class="bi bi-truck"></i>Shipping Settings</a>
+          <a class="nav-link" href="{{ route('admin.shipping.index') }}"><i class="bi bi-truck"></i>Shipping Settings</a>
         </nav>
 
         <div class="mt-auto pb-4 px-3">
-          <button class="btn btn-logout w-100"><i class="bi bi-box-arrow-right me-1"></i> Log Out</button>
+          <a class="btn btn-logout w-100" href="#" onclick="event.preventDefault();document.getElementById('logout-form').submit();"><i class="bi bi-box-arrow-right me-1"></i> Log Out</a>
+          <form id="logout-form" action="{{ route('logout') }}" method="POST" style="display: none;">
+            @csrf
+          </form>
         </div>
+
+
     </aside>
 
     <main class="main-wrap flex-grow-1" style="min-width: 0;">
@@ -110,20 +120,23 @@
           </div>
         </div>
 
-        <form action="{{ route('admin.sellers.index') }}" method="GET" ">
+        <form action="{{ route('admin.sellers.index') }}" method="GET" >
           <div class="gg-card p-3 p-md-4 mb-3">
             <div class="row g-2 align-items-center">
               <div class="col-12 col-md-6">
                 <div class="input-group">
                   <span class="input-group-text"><i class="bi bi-search"></i></span>
-                  <input id="searchInput" type="text" class="form-control" placeholder="Search by ID, Store Name, Owner...">
+                  <input id="searchInput" name="search" value="{{ request('search') }}" type="text" class="form-control" placeholder="Search by ID, Store Name, Owner...">
+                  <div class="d-none">
+                      <button class="btn btn-primary" >Search</button>
+                  </div>
+                  
                 </div>
-              </div>
+              </div>              
             </div>
-          </div>
+          </div> 
         </form>
         
-
         <section class="gg-card p-0">
           <div class="table-responsive">
             <table class="table table-hover align-middle mb-0">
@@ -145,31 +158,34 @@
                   <td class="fw-semibold text-muted">STORE-{{ $s->id }}</td>
                   <td class="fw-bold">{{ $s->store_name }}</td>
                   <td>{{ $s->user->name ?? '-' }}</td>
-                  <td><span class="text-warning text-opacity-75">{{ $s->user->email ?? '-' }}</span></td>
-                  <td>{{ $s->phone ?? '-' }}</td>
+                  <td><span class="text-opacity-75">{{ $s->user->email ?? '-' }}</span></td>
+                  <td>{{ $s->store_phone ?? '-' }}</td>
                   <td class="text-center">{{ $s->products_count }}</td>
                   <td><span class="badge-status {{ strtolower($s->status) }}">{{ ucfirst($s->status) }}</span></td>
                   <td class="text-end text-nowrap">
                     <div class="d-inline-flex align-items-center gap-1">
-                      <button class="btn btn-icon rounded-circle border-0 text-primary" title="View" onclick="openSellerView({{ $s->id }})">
+                      <button class="btn btn-icon rounded-circle border-0 text-primary" title="View" onclick="openSellerView({{ $s->id }})" data-id="{{ $s->id }}">
                         <i class="bi bi-eye-fill fs-5"></i>
                       </button>
 
                       {{-- Toggle status form --}}
-                      <form action="{{ route('admin.sellers.update-status', $s->id) }}" method="POST" class="d-inline">
-                        @csrf @method('PATCH')
+                    <form action="{{ route('admin.sellers.update-status', $s->id, $s->user->id) }}" method="POST" class="d-inline">
+                        @csrf
+                        @method('PATCH')
+
                         @if(strtolower($s->status) === 'active')
-                          <input type="hidden" name="status" value="suspended">
-                          <button class="btn btn-icon rounded-circle border-0 text-danger" title="Suspend">
-                            <i class="bi bi-dash-circle-fill fs-5"></i>
-                          </button>
+                            <input type="hidden" name="status" value="suspended">
+                            <button class="btn btn-icon rounded-circle border-0 text-danger" title="Suspend">
+                                <i class="bi bi-dash-circle-fill fs-5"></i>
+                            </button>
                         @else
-                          <input type="hidden" name="status" value="active">
-                          <button class="btn btn-icon rounded-circle border-0 text-success" title="Activate">
-                            <i class="bi bi-check-circle-fill fs-5"></i>
-                          </button>
+                            <input type="hidden" name="status" value="active">
+                            <button class="btn btn-icon rounded-circle border-0 text-success" title="Activate">
+                                <i class="bi bi-check-circle-fill fs-5"></i>
+                            </button>
                         @endif
-                      </form>
+                    </form>
+
                     </div>
                   </td>
                 </tr>
@@ -185,7 +201,6 @@
             <div class="small text-muted">{{ $sellers->total() }} results</div>
             <nav>{{ $sellers->links() }}</nav>
           </div>
-
         </section>
 
         <p class="text-center mt-4 foot small mb-0">© 2025 GigaGears. All rights reserved.</p>
@@ -217,7 +232,10 @@
                 <div class="seller-info-header px-4">
                   <div>
                     <h2 id="vm-store-name" class="h4 fw-bold mb-1">Store Name</h2>
-                    <p class="text-muted small mb-0"><i class="bi bi-geo-alt-fill me-1"></i> Jakarta, Indonesia • Since 2025</p>
+                    <p class="text-muted small mb-0" id="vm-location">
+                      <i class="bi bi-geo-alt-fill me-1"></i> -
+                    </p>
+
                   </div>
                   <div class="d-flex gap-2">
                      <span id="vm-header-actions"></span>
@@ -245,25 +263,53 @@
                 <div class="col-12 col-lg-8">
                   <h5 class="fw-bold mb-3">Store Performance</h5>
                   <div class="row g-3">
-                    <div class="col-6 md-6"><div class="stat-card-box"><div class="stat-label">Active Products</div><div class="stat-value text-primary" id="vm-stat-prod">0</div></div></div>
-                    <div class="col-6 md-6"><div class="stat-card-box"><div class="stat-label">Total Revenue</div><div class="stat-value text-success">$35,600</div></div></div>
-                    <div class="col-6 md-6"><div class="stat-card-box"><div class="stat-label">Total Orders</div><div class="stat-value text-info">450</div></div></div>
-                    <div class="col-6 md-6"><div class="stat-card-box"><div class="stat-label">Pending Withdrawals</div><div class="stat-value text-warning">$1,250</div></div></div>
-                  </div>
+                    
+                      <!-- Active Products -->
+                    <div class="col-6 md-6">
+                        <div class="stat-card-box">
+                            <div class="stat-label">Active Products</div>
+                            <div class="stat-value text-primary" id="vm-stat-prod">0</div>
+                        </div>
+                    </div>
+
+                    <!-- Total Revenue -->
+                    <div class="col-6 md-6">
+                        <div class="stat-card-box">
+                            <div class="stat-label">Total Revenue</div>
+                            <div class="stat-value text-success" id="vm-revenue">$0</div>
+                        </div>
+                    </div>
+
+                    <!-- Total Orders -->
+                    <div class="col-6 md-6">
+                        <div class="stat-card-box">
+                            <div class="stat-label">Total Orders</div>
+                            <div class="stat-value text-info" id="vm-orders">0</div>
+                        </div>
+                    </div>
                 </div>
-              </div>
+            </div>
 
               <div class="mt-4">
                 <h5 class="fw-bold mb-3">Product List</h5>
                 <div class="gg-card p-0 overflow-hidden">
                   <div class="table-responsive">
-                    <table class="table table-blue-head mb-0">
-                      <thead><tr><th>Product ID</th><th>Product Name</th><th>Price ($)</th><th>Stock</th><th>Sold</th><th>Status</th><th class="text-end">Rating</th></tr></thead>
+                    <table class="table table-blue-head mb-0" id="vm-products-table">
+                      <thead>
+                        <tr>
+                          <th>Product ID</th>
+                          <th>Product Name</th>
+                          <th>Price</th>
+                          <th>Stock</th>
+                          <th>Sold</th>
+                          <th>Status</th>
+                          <th class="text-end">Rating</th></tr></thead>
                       <tbody>
-                        <tr><td class="text-muted fw-bold">PRD-5012</td><td class="fw-bold">Logitech G Pro X</td><td class="text-warning fw-bold">129.99</td><td>45</td><td>100</td><td><span class="text-success fw-bold small">Active</span></td><td class="text-end fw-bold"><i class="bi bi-star-fill text-warning me-1"></i>4.8</td></tr>
-                        <tr><td class="text-muted fw-bold">PRD-5013</td><td class="fw-bold">Razer BlackWidow V3</td><td class="text-warning fw-bold">139.99</td><td>12</td><td>85</td><td><span class="text-success fw-bold small">Active</span></td><td class="text-end fw-bold"><i class="bi bi-star-fill text-warning me-1"></i>4.7</td></tr>
                       </tbody>
+                      
                     </table>
+                    <div id="vm-products-pager-container" class="mt-3 d-flex justify-content-between px-2"></div>
+
                   </div>
                 </div>
               </div>
@@ -281,70 +327,7 @@
 
   <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
   
-  <script>
-    function currencyIdr(n){
-      return 'Rp' + Number(n || 0).toLocaleString('id-ID', {maximumFractionDigits:0});
-    }
-
-    function openSellerView(id){
-      fetch(`/admin/sellers/${id}/json`)
-        .then(r => {
-          if(!r.ok) throw new Error('Failed to fetch');
-          return r.json();
-        })
-        .then(data => {
-          // header
-          document.getElementById('vm-store-title').innerText = data.store_name;
-          document.getElementById('vm-store-name').innerText = data.store_name;
-          document.getElementById('vm-owner').innerText = data.owner_name;
-          document.getElementById('vm-email').innerText = data.email;
-          document.getElementById('vm-phone').innerText = data.phone;
-          document.getElementById('vm-status-badge').innerText = data.status;
-          document.getElementById('vm-status-badge').className = 'badge-status ' + (data.status || '').toLowerCase();
-
-          document.getElementById('vm-stat-prod').innerText = data.product_count;
-          // optional stat fields
-          document.getElementById('vm-total-revenue')?.innerText = currencyIdr(data.total_revenue);
-          document.getElementById('vm-total-orders')?.innerText = data.total_orders;
-
-          // avatar
-          const avatar = document.getElementById('vm-avatar');
-          if(data.avatar) avatar.src = data.avatar;
-          else avatar.src = '/placeholder-avatar.png';
-
-          // products list
-          const tbody = document.getElementById('vm-product-list');
-          tbody.innerHTML = data.products.map(p => `
-            <tr>
-              <td class="text-muted fw-bold">PRD-${p.id}</td>
-              <td class="fw-bold">${p.name}</td>
-              <td class="text-warning fw-bold">${currencyIdr(p.price)}</td>
-              <td>${p.stock}</td>
-              <td>${p.sold}</td>
-              <td><span class="${p.status.toLowerCase()==='active' ? 'text-success fw-bold small' : 'text-muted small'}">${p.status}</span></td>
-              <td class="text-end fw-bold"><i class="bi bi-star-fill text-warning me-1"></i>${p.rating.toFixed(1)}</td>
-            </tr>`).join('');
-
-          new bootstrap.Modal(document.getElementById('viewModal')).show();
-        })
-        .catch(err => {
-          console.error(err);
-          alert('Gagal memuat data seller.');
-        });
-    }
-
-    const btnToggle = document.getElementById('btnToggle');
-    const sidebar = document.getElementById('adminSidebar');
-    const overlay = document.getElementById('sidebarOverlay');
-
-    function toggleSidebar() {
-        sidebar.classList.toggle('show');
-        overlay.classList.toggle('show');
-    }
-
-    if(btnToggle) btnToggle.addEventListener('click', toggleSidebar);
-    if(overlay) overlay.addEventListener('click', toggleSidebar);
-  </script>
+  <script src="{{ asset('js/admin/seller.js') }}"></script>
 
 
 </body>

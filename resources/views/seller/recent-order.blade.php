@@ -16,27 +16,31 @@
   <link rel="stylesheet" href="{{asset('css/styles.css')}}">
 </head>
 <body>
+  @livewireStyles
   <div class="container-fluid">
     <div class="row g-0">
       <!-- ===== SIDEBAR (KONSISTEN) ===== -->
       <aside class="col-12 col-lg-2 side d-none d-lg-block">
         <a href="dashboard.html" class="brand-link" aria-label="GigaGears">
-          <img src="../assets/gigagears-logo.png" alt="GigaGears" class="brand-logo">
+          <img src="{{ asset('images/logo GigaGears.png') }}" alt="GigaGears" class="brand-logo">
         </a>
 
         <nav class="nav flex-column nav-gg">
           <a class="nav-link" href="{{ route('seller.index') }}"><i class="bi bi-grid-1x2"></i>Dashboard</a>
-          <a class="nav-link" href="{{ route('seller.orders') }}"><i class="bi bi-bag"></i>Order</a>
-          <a class="nav-link active" href="{{ route('seller.products') }}"><i class="bi bi-box"></i>Products</a>
+          <a class="nav-link active" href="{{ route('seller.orders') }}"><i class="bi bi-bag"></i>Order</a>
+          <a class="nav-link" href="{{ route('seller.products') }}"><i class="bi bi-box"></i>Products</a>
           <a class="nav-link" href="{{ route('seller.analytics') }}"><i class="bi bi-bar-chart"></i>Analytics & Report</a>
           <a class="nav-link" href="{{ route('seller.inbox') }}"><i class="bi bi-inbox"></i>Inbox</a>
           <hr>
-          <a class="nav-link" href="{{ route('seller.settings.index')}}"><i class="bi bi-gear"></i>Settings</a>
+          <a class="nav-link" href="{{ route('settings.index')}}"><i class="bi bi-gear"></i>Settings</a>
         </nav>
 
         <div class="mt-4">
-          <button class="btn btn-outline-danger w-100"><i class="bi bi-box-arrow-right me-1"></i> Log Out</button>
+          <a class="btn btn-outline-danger w-100" href="#" onclick="event.preventDefault();document.getElementById('logout-form').submit();"><i class="bi bi-box-arrow-right me-1"></i> Log Out</a>
         </div>
+        <form id="logout-form" action="{{ route('logout') }}" method="POST" style="display: none;">
+            @csrf
+        </form>
       </aside>
 
       <!-- ===== MAIN ===== -->
@@ -84,6 +88,7 @@
           </div>
 
           <div class="table-responsive p-3">
+            <livewire:order-shipping-modal />
             <table id="ordersTable" class="table mb-0">
               <thead>
                 <tr>
@@ -100,17 +105,21 @@
             @if($orders)
               <tbody id="ordersBody">
                 @php $i = 0; @endphp
-                @forelse ($orders as $order)
+                @forelse ($orders as $oi)                
                 <tr>
-                  <th scope='row'>#{{ $order->id}}</th>
-                  <td>{{ $order->product->name }}</td>
-                  <td>{{ $order->user->name }}</td>
-                  <td>{{ $order->status }}</td>
-                  <td>{{ $order->item->qty }}</td>
-                  <td>{{ $order->item->price }}</td>
-                  <td>{{ $order->order_date }}</td>    
-                  <td><button class="btn btn-primary btn-sm btn-update me-2" data-bs-toggle="modal" data-bs-target="#orderUpdateModal">Update</button></td>
-                  @php $i++ @endphp
+                  <th scope='row'>#{{$oi->order->id}}</th>
+                  <td>{{ $oi->product->name }}</td>
+                  <td>{{ $oi->order->user->name }}</td>
+                  <td>{{ $oi->order->status }}</td>
+                  <td>{{ $oi->total_qty }}</td>
+                  <td>{{ $oi->price }}</td>
+                  <td>{{ $oi->order_date }}</td>    
+                  <td><button 
+                      class="btn btn-primary btn-sm"
+                      onclick="Livewire.emit('openOrderShippingModal', {{ $order->id }})">
+                      Update
+                    </button>
+                    </td>
                 </tr>
                 <tr>
                   @empty
@@ -141,93 +150,108 @@
   <!-- Bootstrap JS -->
   <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
 
-  <!-- ===================== UPDATE ORDER MODAL ===================== -->
+ <div wire:ignore.self>
   <div class="modal fade" id="orderUpdateModal" tabindex="-1" aria-labelledby="orderUpdateModalLabel" aria-hidden="true">
     <div class="modal-dialog modal-xl modal-dialog-centered modal-dialog-scrollable">
       <div class="modal-content border-0 shadow-lg">
         <div class="modal-header bg-light">
-          <div>
-            <h5 class="m-2">Update Order</h5>
-          </div>
-          <div class="d-flex align-items-center gap-4">
-            <button type="button" class="btn btn-icon btn-outline-secondary" data-bs-dismiss="modal" aria-label="Close">
-              <i class="bi bi-x-lg"></i>
-            </button>
-          </div>
+          <h5 class="m-2">Update Order <small class="text-muted">#{{ $orderId ?? '' }}</small></h5>
+          <button type="button" class="btn btn-icon btn-outline-secondary" data-bs-dismiss="modal" aria-label="Close">
+            <i class="bi bi-x-lg"></i>
+          </button>
         </div>
+
         <div class="modal-body">
           <div class="row g-3">
-            <!-- KIRI: Form utama -->
             <div class="col-12 col-lg-8">
               <div class="card border-0 shadow-sm">
                 <div class="card-body">
-                    <div class="row g-3">
-                      <div class="col-12 col-md-6">
-                        <label class="form-label">Status</label>
-                        <div class="form-control bg-light border-0">{{ $orders->status }}</div>
-                      </div>
-                      <div class="col-12 col-md-6">
-                        <label class="form-label">Total pembayaran</label>
-                        <div class="input-group">
-                          <span class="input-group-text">Rp.</span>
-                          <div id="ou-total" class="form-control bg-light fw-semibold"> {{ number_format($orders->total_amount) }}</div>
+                  <div class="row g-3">
+                    <div class="col-12 col-md-6">
+                      <label class="form-label">Status</label>
+                      <select wire:model="status" class="form-select">
+                        <option value="">--Pilih status--</option>
+                        <option value="pending">Pending</option>
+                        <option value="processing">Processing</option>
+                        <option value="shipped">Shipped</option>
+                        <option value="delivered">Delivered</option>
+                        <option value="completed">Completed</option>
+                        <option value="cancelled">Cancelled</option>
+                        <option value="refunded">Refunded</option>
+                      </select>
+                      @error('status') <small class="text-danger">{{ $message }}</small> @enderror
+                    </div>
+
+                    <div class="col-12 col-md-6">
+                      <label class="form-label">Total pembayaran</label>
+                      <div class="input-group">
+                        <span class="input-group-text">Rp.</span>
+                        <div class="form-control bg-light fw-semibold">
+                          {{ number_format(optional($order)->total ?? 0, 0, ',', '.') }}
                         </div>
                       </div>
-                      <div class="col-12">
-                        <hr class="my-2">
-                        <div class="small text-muted">Shipping Information</div>
-                      </div>
-                      <div class="col-12 col-md-6">
-                        <label class="form-label">Jasa Kirim</label>
-                        <select wire:model="courier" id="orderStatus" class="form-select">
-                          <option value="all">--Pilih Kurir---</option>
-                          @foreach($courier as $c)
-                            <option value="{{ $c['name'] }}">{{ $c['name'] }}</option>
-                          @endforeach      
-                        </select>
-                        @error('courier') <small class="text-danger">{{ $message }}</small> @enderror
-                      </div>
-                    <!-- Cek jika ada kurir yang dipilih -->
-                    @if($courier)
-                      <div class="col-12 col-md-6">
-                        <label class="form-label">No. Resi</label>
-                        <div wire:model.defer="tracking_number" class="form-control bg-light border-0"></div>    
-                      </div>
-                      <div class="col-12 col-md-6">
-                        <label class="form-label">Biaya kirim</label>
-                          <div class="form-control bg-light border-0" readonly>
-                            Rp {{ number_format($shipping_cost ?? 0) }}
-                          </div> 
-                      </div>
-                      <div class="col-12 col-md-6">
-                        <label class="form-label">Tanggal kirim</label>
-                          <div class="form-control bg-light border-0" readonly>
-                            {{ $shipping_date ?? '-' }}
-                          </div> 
-                      </div>
-                      <div class="col-12 col-md-6">
-                        <label class="form-label">Estimasi Tiba</label>
-                        <div class="form-control bg-light border-0">{{ $eta_text }}</div>
-                      </div>
-                    @endif
-                    </div><!-- /row -->
-                  </div>
-                </div>
-              </div>
-              <!-- KANAN: Aksi cepat + timeline -->
-              <div class="col-12 col-lg-4">
-                <div class="card border-0 shadow-sm mb-3">
-                  <div class="card-body">
-                    <div class="small text-muted mb-2">Quick actions</div>
-                    <div class="d-grid gap-2">
-                      <!-- Livewire -->
-                      <button wire:click="ship" class="btn btn-success"><i class="bi bi-check-circle me-1"></i> Mark as Shipped</button>
-                      <button wire:click="cancelBySeller" class="btn btn-outline-danger" id="ou-cancel-order"><i class="bi bi-x-octagon me-1"></i> Cancel Order</button>
                     </div>
+
+                    <div class="col-12"><hr class="my-2"><div class="small text-muted">Shipping Information</div></div>
+
+                    <div class="col-12 col-md-6">
+                      <label class="form-label">Jasa Kirim</label>
+                      <select wire:model="courier" class="form-select">
+                        <option value="">--Pilih Kurir---</option>
+                        @foreach($couriers as $c)
+                          <option value="{{ $c['name'] }}">{{ $c['name'] }}</option>
+                        @endforeach
+                      </select>
+                      @error('courier') <small class="text-danger">{{ $message }}</small> @enderror
+                    </div>
+
+                    <div class="col-12 col-md-6">
+                      <label class="form-label">No. Resi</label>
+                      <input wire:model.defer="tracking_number" class="form-control" />
+                      @error('tracking_number') <small class="text-danger">{{ $message }}</small> @enderror
+                    </div>
+
+                    <div class="col-12 col-md-6">
+                      <label class="form-label">Biaya kirim</label>
+                      <input wire:model.defer="shipping_cost" type="number" class="form-control" />
+                      @error('shipping_cost') <small class="text-danger">{{ $message }}</small> @enderror
+                    </div>
+
+                    <div class="col-12 col-md-6">
+                      <label class="form-label">Tanggal kirim</label>
+                      <input wire:model.defer="shipping_date" type="date" class="form-control" />
+                      @error('shipping_date') <small class="text-danger">{{ $message }}</small> @enderror
+                    </div>
+
+                    <div class="col-12 col-md-6">
+                      <label class="form-label">Estimasi Tiba</label>
+                      <input wire:model.defer="eta_text" class="form-control" />
+                      @error('eta_text') <small class="text-danger">{{ $message }}</small> @enderror
+                    </div>
+
                   </div>
                 </div>
               </div>
-          </div><!-- /row -->
+            </div>
+
+            <div class="col-12 col-lg-4">
+              <div class="card border-0 shadow-sm mb-3">
+                <div class="card-body">
+                  <div class="small text-muted mb-2">Quick actions</div>
+                  <div class="d-grid gap-2">
+                    <button wire:click="ship" type="button" class="btn btn-success">
+                      <i class="bi bi-check-circle me-1"></i> Mark as Shipped
+                    </button>
+                    <button wire:click="cancelBySeller" type="button" class="btn btn-outline-danger" id="ou-cancel-order">
+                      <i class="bi bi-x-octagon me-1"></i> Cancel Order
+                    </button>
+                    <button wire:click="save" type="button" class="btn btn-primary">Save changes</button>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+          </div>
         </div>
 
         <div class="modal-footer bg-light d-flex justify-content-between">
@@ -236,12 +260,37 @@
           </div>
           <div class="d-flex gap-2">
             <button class="btn btn-outline-secondary" data-bs-dismiss="modal">Close</button>
-            <button class="btn btn-primary" id="ou-save">Save changes</button>
           </div>
         </div>
+
       </div>
     </div>
   </div>
+</div>
+
+
+<script>
+  document.addEventListener('DOMContentLoaded', function () {
+      const modalEl = document.getElementById('orderUpdateModal');
+      const bsModal = new bootstrap.Modal(modalEl);
+
+      window.addEventListener('open-order-update-modal', () => {
+          bsModal.show();
+      });
+
+      window.addEventListener('close-order-update-modal', () => {
+          bsModal.hide();
+      });
+
+      // optional: show simple toast from Livewire notify
+      window.addEventListener('notify', (e) => {
+          const { type, message } = e.detail || e;
+          // gunakan alert sementara atau implement toast
+          alert(message);
+      });
+  });
+</script>
+@livewireScripts
 </body>
 </html>
 

@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Http\Controllers\Seller;
+namespace App\Http\Controllers;
 
 use App\Http\Controllers\Controller;
 use App\Http\Requests\UpdateOwnerRequest;

@@ -3,13 +3,14 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="csrf-token" content="{{ csrf_token() }}">
   <title>GigaGears Admin — Customer Data</title>
 
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
   <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" rel="stylesheet">
   <link href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@400;600;700&display=swap" rel="stylesheet">
 
-  <link rel="stylesheet" href="css/admin.css">
+  <link rel="stylesheet" href="{{ asset('css/admin.css') }}">
 
   <style>
     /* 1. Fix Lebar & Layout Sidebar */
@@ -58,28 +59,37 @@
   </style>
 </head>
 <body>
+  @if(session('success'))
+    <div class="alert alert-success alert-dismissible fade show position-fixed top-0 end-0 m-3" role="alert" style="z-index: 1100;">
+      {{ session('success') }}
+      <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+    </div>
+  @endif
   
   <div class="container-fluid p-0 d-flex" style="min-height: 100vh; overflow-x: hidden;">
     
     <aside class="admin-side" id="adminSidebar">
-        <a href="dashboard.html" class="brand-link" aria-label="GigaGears">
-          <img src="{{assets('assets/logo GigaGears.png')}}" alt="GigaGears" class="brand-logo">
+        <a href="{{ route('admin.dashboard') }}" class="brand-link" aria-label="GigaGears">
+          <img src="{{asset('images/logo GigaGears.png')}}" alt="GigaGears" class="brand-logo">
         </a>
 
         <div class="nav-scroll-wrap">
             <nav class="nav flex-column nav-admin">
               <a class="nav-link" href="{{ route('admin.dashboard') }}"><i class="bi bi-grid-1x2"></i>Dashboard</a>
-              <a class="nav-link" href="{{ route('admin.customers.index') }}"><i class="bi bi-people"></i>Data Customer</a>
+              <a class="nav-link active" href="{{ route('admin.customers.index') }}"><i class="bi bi-people"></i>Data Customer</a>
               <a class="nav-link" href="{{ route('admin.sellers.index') }}"><i class="bi bi-person-badge"></i>Data Seller</a>
               <a class="nav-link" href="{{ route('admin.transactions.index') }}"><i class="bi bi-receipt"></i>Data Transaction</a>
               <a class="nav-link" href="{{ route('admin.products.index') }}"><i class="bi bi-box"></i>Products</a>
-              <a class="nav-link active" href="{{ route('admin.shipping.index') }}"><i class="bi bi-truck"></i>Shipping Settings</a>
+              <a class="nav-link" href="{{ route('admin.shipping.index') }}"><i class="bi bi-truck"></i>Shipping Settings</a>
             </nav>
         </div>
 
         <div class="mt-auto pb-4 px-3 pt-3 border-top">
-          <button class="btn btn-logout w-100"><i class="bi bi-box-arrow-right me-1"></i> Log Out</button>
+          <a class="btn btn-logout w-100" href="#" onclick="event.preventDefault();document.getElementById('logout-form').submit();"><i class="bi bi-box-arrow-right me-1"></i> Log Out</a>
         </div>
+        <form id="logout-form" action="{{ route('logout') }}" method="POST" style="display: none;">
+            @csrf
+        </form>
     </aside>
 
     <main class="main-wrap flex-grow-1" style="min-width: 0;">
@@ -141,18 +151,17 @@
                           CUST-{{ str_pad($c->id, 4, '0', STR_PAD_LEFT) }}
                       </td>
                       <td class="fw-bold">{{ $c->name }}</td>
-                      <td>{{ $c->email }}</td>
-                      <td>{{ $c->phone ?? '-' }}</td>
+                      <td>{{ $c->email ?? '-' }}</td>
+                      <td>{{ $c->customerProfile->phone ?? '-' }}</td>
                       <td>{{ $c->created_at->format('d M Y') }}</td>
                       <td>
                           <span class="badge-status {{ strtolower($c->status) }}">
-                              {{ $c->status }}
+                              {{ ucfirst($c->status) }}
                           </span>
                       </td>
                       <td class="text-end text-nowrap">
                           {{-- EDIT --}}
-                          <button class="btn p-0 border-0 text-secondary ms-2"
-                                  onclick="openCustomerEdit({{ $c->id }})">
+                          <button class="btn p-0 border-0 text-secondary ms-2" onclick="openCustomerEdit(this)" data-id="{{ $c->id }}" data-json="{{ url('/admin/customers/'.$c->id.'/json') }}" data-route="{{ route('admin.customers.update', $c->id) }}">
                               <i class="bi bi-pencil-square fs-5"></i>
                           </button>
                           {{-- ACTIVATE / SUSPEND --}}
@@ -161,17 +170,17 @@
                                     method="POST" class="d-inline">
                                   @csrf
                                   @method('PATCH')
-                                  <input type="hidden" name="status" value="Suspended">
+                                  <input type="hidden" name="status" value="suspended">
                                   <button class="btn p-0 border-0 text-danger ms-2">
                                       <i class="bi bi-dash-circle-fill fs-5"></i>
                                   </button>
                               </form>
-                          @elseif(strtolower($c->status) === 'banned')
+                          @elseif(strtolower($c->status) === 'suspended')
                               <form action="{{ route('admin.customers.update-status', $c->id) }}" 
                                     method="POST" class="d-inline">
                                   @csrf
                                   @method('PATCH')
-                                  <input type="hidden" name="status" value="Active">
+                                  <input type="hidden" name="status" value="active">
                                   <button class="btn p-0 border-0 text-success ms-2">
                                       <i class="bi bi-check-circle-fill fs-5"></i>
                                   </button>
@@ -191,8 +200,8 @@
           </div>
 
           <div class="d-flex justify-content-between align-items-center px-3 px-md-4 py-3 border-top">
-            <div class="small text-muted"><span id="countInfo">0</span> results</div>
-            <nav><ul class="pagination pagination-sm mb-0" id="pager"></ul></nav>
+            <div class="small text-muted">{{ $customers->total() }} results</div>
+            <nav>{{ $customers->links() }}</nav>
           </div>
         </section>
 
@@ -200,85 +209,62 @@
     </main>
   </div>
 
+    <!-- EDIT MODAL -->
   <div class="modal fade" id="editModal" tabindex="-1" aria-hidden="true">
-  <div class="modal-dialog modal-dialog-centered">
-    <div class="modal-content">
-      <div class="modal-header">
-        <h5 class="modal-title">Edit Customer</h5>
-        <button class="btn-close" data-bs-dismiss="modal"></button>
-      </div>
-      <form id="editCustomerForm" method="POST">
-        @csrf
-        @method('PATCH')
-        <div class="modal-body">
-          <div class="mb-3">
-            <label class="form-label small text-muted">Full Name</label>
-            <input type="text" name="name" class="form-control" required>
+    <div class="modal-dialog modal-dialog-centered">
+      <div class="modal-content">
+        <form id="editUserFormAjax" class="needs-validation" novalidate>
+          @csrf
+          @method('PATCH')
+          <input type="hidden" id="user_id" name="user_id" value="">
+
+          <div class="modal-header">
+            <h5 class="modal-title">Edit Customer</h5>
+            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
           </div>
 
-          <div class="mb-3">
-            <label class="form-label small text-muted">Email</label>
-            <input type="email" name="email" class="form-control" required>
+          <div class="modal-body">
+            <div class="mb-3">
+              <label class="form-label">Name</label>
+              <input type="text" id="name" name="name" class="form-control">
+              <div class="invalid-feedback" id="err-name"></div>
+            </div>
+
+            <div class="mb-3">
+              <label class="form-label">Email</label>
+              <input type="email" id="email" name="email" class="form-control">
+              <div class="invalid-feedback" id="err-email"></div>
+            </div>
+
+            <div class="mb-3">
+              <label class="form-label">Phone</label>
+              <input type="text" id="phone" name="phone" class="form-control">
+              <div class="invalid-feedback" id="err-phone"></div>
+            </div>
+
+            <div class="mb-3">
+              <label class="form-label">Address</label>
+              <textarea id="address" name="address" class="form-control" rows="2"></textarea>
+              <div class="invalid-feedback" id="err-address"></div>
+            </div>
           </div>
 
-          <div class="mb-3">
-            <label class="form-label small text-muted">Phone Number</label>
-            <input type="text" name="phone" class="form-control">
+          <div class="modal-footer">
+            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+            <button type="submit" id="saveAjax" class="btn btn-primary">Save changes</button>
           </div>
-
-          <div class="mb-3">
-            <label class="form-label small text-muted">Address</label>
-            <textarea name="address" rows="2" class="form-control"></textarea>
-          </div>
-
-        </div>
-
-        <div class="modal-footer bg-light">
-          <button class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-          <button class="btn btn-primary">Save Changes</button>
-        </div>
-
-      </form>
+        </form>
       </div>
     </div>
   </div>
+
 
  
 
   <div class="sidebar-overlay" id="sidebarOverlay"></div>
 
   <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
-  
-  <script>
-    const btnToggle = document.getElementById('btnToggle');
-    const sidebar = document.getElementById('adminSidebar');
-    const overlay = document.getElementById('sidebarOverlay');
-
-    function toggleSidebar() {
-        sidebar.classList.toggle('show');
-        overlay.classList.toggle('show');
-    }
-
-    if(btnToggle) btnToggle.addEventListener('click', toggleSidebar);
-    if(overlay) overlay.addEventListener('click', toggleSidebar);
-
-    function openCustomerEdit(id) {
-      fetch(`/admin/customers/${id}/json`)
-          .then(res => res.json())
-          .then(c => {
-
-              const form = document.getElementById('editCustomerForm');
-              form.action = `/admin/customers/${id}/edit`;
-
-              form.name.value = c.name;
-              form.email.value = c.email;
-              form.phone.value = c.phone;
-              form.address.value = c.address;
-
-              new bootstrap.Modal(document.getElementById('editModal')).show();
-        });
-    }
-  </script>
+  <script src="{{ asset('js/admin/customer.js') }}"></script>
 
 
 </body>

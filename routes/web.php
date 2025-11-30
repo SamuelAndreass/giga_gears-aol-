@@ -5,13 +5,33 @@ use App\Http\Controllers\ProfileController;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\SellerController;
 use App\Http\Controllers\CartController;
-use App\Http\Controllers\Seller\SettingsController;
+use App\Http\Controllers\SettingsController;
 use App\Http\Controllers\Auth\SocialAuthController;
-Route::redirect('/',  '/login');
 
 
-Route::get('login/google', [SocialAuthController::class, 'redirectToGoogle'])->name('login.google');
-Route::get('login/google/callback', [SocialAuthController::class, 'handleGoogleCallback']);
+Route::middleware('guest')->group(function () {
+    Route::get('/login', [\App\Http\Controllers\Auth\AuthenticatedSessionController::class, 'create'])->name('login');
+    Route::post('/login', [\App\Http\Controllers\Auth\AuthenticatedSessionController::class, 'store']);
+    Route::get('login/google', [SocialAuthController::class, 'redirectToGoogle'])->name('login.google');
+    Route::get('login/google/callback', [SocialAuthController::class, 'handleGoogleCallback'])->name('login.google.callback');
+    Route::get('/register', [\App\Http\Controllers\Auth\RegisteredUserController::class, 'create'])->name('register');
+    Route::post('/register', [\App\Http\Controllers\Auth\RegisteredUserController::class, 'store']);
+});
+
+// redirect based on role after login
+Route::get('/', function () {
+    if (! auth()->check()) {
+        return redirect()->route('login');
+    }
+    $user = auth()->user();
+    return match ($user->role) {
+        'admin' => redirect()->route('admin.dashboard'),
+        'seller' => redirect()->route('seller.index'),
+        default => redirect()->route('dashboard'),
+    };
+});
+
+
 
 //Route::get('/products', [ProductController::class, 'index'])->name('products.index');
 //Route::get('/products/featured', [ProductController::class, 'featured'])->name('products.featured');
@@ -46,34 +66,34 @@ Route::middleware(['auth','ensure.seller', 'ensure.active'])->prefix('seller')->
     Route::get('/add/product', [SellerController::class,'viewAddProductForm'])->name('seller.view.add.product');
     Route::post('/update/product/{id}', [SellerController::class, '']);
     Route::post('/update/status', [SellerController::class, 'updateStatus']);
-    Route::get('/recent-order', [SellerController::class,'viewReecentOrder'])->name('seller.orders');
-    Route::get('/recent-order', [SellerController::class,'search'])->name('seller.recent.order');
+    Route::get('/recent-order', [SellerController::class,'viewRecentOrder'])->name('seller.orders');
+    Route::get('/recent-order/search', [SellerController::class,'search'])->name('seller.recent.order');
+    Route::get('settings', [SettingsController::class, 'index'])->name('settings.index');
+    Route::post('settings/owner', [SettingsController::class, 'updateOwner'])->name('settings.owner.update');
+    Route::post('settings/store', [SettingsController::class, 'updateStore'])->name('settings.store.update');
+    Route::post('settings/password', [SettingsController::class, 'updatePassword'])->name('settings.password.update');
 });
 
-Route::middleware(['auth','ensure.seller', 'ensure.active'])->prefix('seller')->name('seller.')->group(function () {
-        Route::get('settings', [SettingsController::class, 'index'])->name('settings.index');
-        Route::post('settings/owner', [SettingsController::class, 'updateOwner'])->name('settings.owner.update');
-        Route::post('settings/store', [SettingsController::class, 'updateStore'])->name('settings.store.update');
-        Route::post('settings/password', [SettingsController::class, 'updatePassword'])->name('settings.password.update');
-    });
 
 
 // admin
-Route::middleware(['auth:web', 'ensure.admin'])->prefix('admin')->group(function(){
+Route::middleware(['auth', 'ensure.admin'])->prefix('admin')->group(function(){
     Route::get('/dashboard', [AdminController::class, 'index'])->name('admin.dashboard');
-    Route::get('/transactions', [AdminController::class, 'transactions'])->name('admin.transactions.index');
+    Route::get('/transactions', [AdminController::class, 'dataTransaction'])->name('admin.transactions.index');
     Route::get('/shipping', [AdminController::class, 'shippingIndex'])->name('admin.shipping.index');
-    Route::post('/add/shipping', [AdminController::class, 'addShipping'])->name('admin.shipping.store');
-    Route::put('/admin/shipping/{shipping}', [AdminController::class, 'update'])->name('admin.shipping.update');
+    Route::post('/add/shipping/json', [AdminController::class, 'addShipping'])->name('admin.shipping.store');
+    Route::put('/shipping/{shipping}', [AdminController::class, 'editShipping'])->name('admin.shipping.update');
     Route::get('/products', [AdminController::class, 'productIndex'])->name('admin.products.index');
     Route::patch('/products/{product}/toggle-status', [AdminController::class, 'toggleStatus'])->name('admin.products.toggle-status');
-    Route::get('/admin/products/{product}/json', [AdminController::class, 'json'])->name('admin.products.json');
-    Route::patch('/admin/customers/{user}/edit', [AdminController::class, 'update'])->name('admin.customers.update');
-    Route::get('/customers', [AdminController::class, 'index'])->name('admin.customers.index');
+    Route::get('/products/{product}/json', [AdminController::class, 'productJson'])->name('admin.products.json');
+    Route::patch('/customers/{user}/edit', [AdminController::class, 'updateUser'])->name('admin.customers.update');
+    Route::get('/customers/{user}/json', [AdminController::class, 'userJson'])->name('admin.customers.json');
+    Route::get('/customers', [AdminController::class, 'viewUser'])->name('admin.customers.index');
     Route::patch('/customers/{user}/status', [AdminController::class, 'updateStatus'])->name('admin.customers.update-status');
-    Route::get('/sellers', [AdminController::class, 'index'])->name('admin.sellers.index');
-    Route::get('/sellers/{seller}/json', [AdminController::class, 'json'])->name('admin.sellers.json');
-    Route::patch('/sellers/{seller}/status', [AdminController::class, 'updateStatus'])->name('admin.sellers.update-status');
+    Route::get('/sellers', [AdminController::class, 'sellerIndex'])->name('admin.sellers.index');
+    Route::get('/sellers/{seller}/json', [AdminController::class, 'sellerJson'])->name('admin.sellers.json');
+    Route::get('/admin/sellers/{seller}/products', [AdminController::class, 'sellerProductsJson']);
+    Route::patch('/sellers/{seller}/status', [AdminController::class, 'updateStatusSeller'])->name('admin.sellers.update-status');
 });
 
 

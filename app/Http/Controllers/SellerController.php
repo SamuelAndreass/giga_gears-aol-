@@ -14,59 +14,73 @@ use App\Models\Category;
 use App\Models\Shipping;
 use Illuminate\Support\Facades\Validator;
 use App\Models\StoreReview;
+use Illuminate\Support\Facades\DB;
 
 class SellerController extends Controller
 {
     public function viewMainDashboard(){
         $user = Auth::user()->sellerStore;
-        $id = $user->id;
+        $storeId = $user->id;
         $total_order = DB::table('Order_Items as oi')
-            ->join('Product as p', 'oi.ProductCode', '=', 'p.Code')
-            ->where('p.StoreID', $storeId)
-            ->distinct('oi.OrdersID')
-            ->count('oi.OrdersID');
+            ->join('Products as p', 'oi.product_id', '=', 'p.id')
+            ->where('p.seller_store_id', $storeId)
+            ->distinct('oi.id')
+            ->count('oi.id');
         
-        $monthly_revenue = $monthlyRevenue = DB::table('Order_Items as oi')
-            ->join('Product as p', 'oi.ProductCode', '=', 'p.Code')
-            ->join('Orders as o', 'oi.OrdersID', '=', 'o.ID')
-            ->where('p.StoreID', $storeId)
-            ->whereMonth('o.OrderDate', $now->month)
-            ->whereYear('o.OrderDate', $now->year)
-            ->selectRaw('COALESCE(SUM(oi.Price * oi.Qty), 0) as revenue')
+        $monthlyRevenue = DB::table('Order_Items as oi')
+            ->join('Products as p', 'oi.product_id', '=', 'p.id')
+            ->join('Orders as o', 'oi.order_id', '=', 'o.id')
+            ->where('p.seller_store_id', $storeId)
+            ->whereMonth('o.order_date', now()->month)
+            ->whereYear('o.order_date', now()->year)
+            ->selectRaw('COALESCE(SUM(oi.subtotal), 0) as revenue')
             ->value('revenue');
 
-        $activeProducts = DB::table('Product')
-            ->where('StoreID', $storeId)
-            ->where('QtyInStock', '>', 0)
+        $activeProducts = DB::table('Products')
+            ->where('seller_store_id', $storeId)
+            ->where('stock', '>', 0)
             ->count();
         
-        $storeRating = DB::table('Store_Rating')
-            ->where('StoreID', $storeId)
-            ->avg('Rating');
+        $storeRating = DB::table('store_reviews')
+            ->where('seller_store_id', $storeId)
+            ->avg('rating');
+
         $storeRating = $storeRating ? number_format($storeRating, 1) : 0;
         $sales = DB::table('Order_Items as oi')
-            ->join('Product as p', 'oi.ProductCode', '=', 'p.Code')
-            ->join('Orders as o', 'oi.OrdersID', '=', 'o.ID')
-            ->where('p.StoreID', $storeId)
+            ->join('Products as p', 'oi.product_id', '=', 'p.id')
+            ->join('Orders as o', 'oi.order_id', '=', 'o.id')
+            ->where('p.seller_store_id', $storeId)
             ->selectRaw('
-                MONTH(o.OrderDate) as month,
-                YEAR(o.OrderDate) as year,
-                SUM(oi.Price * oi.Qty) as revenue
+                MONTH(o.order_date) as month,
+                YEAR(o.order_date) as year,
+                SUM(oi.subtotal) as revenue
             ')
             ->groupBy('year', 'month')
             ->orderBy('year')
             ->orderBy('month')
             ->get();
 
-        // convert to format chart.js
+        // ====== FORCE LABEL 1–12 ======
         $labels = [];
         $data = [];
-        foreach ($sales as $row) {
-            $labels[] = date("M Y", strtotime("$row->year-$row->month-01")); // contoh: Jan 2025
-            $data[] = $row->revenue;
+
+        // buat label bulan Januari–Desember
+        for ($i = 1; $i <= 12; $i++) {
+            $labels[] = date("M", strtotime("2024-$i-01")); // kalo mau tahun dinamis bisa diganti
+            $data[$i] = 0; // default revenue = 0
         }
+
+        // isi revenue dari hasil query
+        foreach ($sales as $row) {
+            $data[$row->month] = $row->revenue;
+        }
+
+        // rapikan data (Chart.js butuh array indexed 0-n)
+        $data = array_values($data);
         
-        return view('seller.dashboard', compact('total_order', 'monthly_revenue', 'activeProducts', 'storeRating', 'labels', 'data'));
+        $storelogo = SellerStore::where('user_id', Auth::id())->value('store_logo');
+
+        return view('seller.seller-dashboard', compact('total_order', 'storelogo', 'monthlyRevenue', 'activeProducts', 'storeRating', 'labels', 'data'));
     }
 
     public function store(Request $request){
@@ -124,29 +138,103 @@ class SellerController extends Controller
         $validStatuses = ['pending','processing','shipped','delivered','completed','cancelled','refunded'];
         $status = $request->query('status');
 
-        $query = Order::query()->with(['items.product','user','store']); // eager load sesuai kebutuhan
+        $query = OrderItem::query()->with(['product', 'order']); // eager load sesuai kebutuhan
 
         // filter status bila ada dan valid
         if (!empty($status) && in_array(strtolower($status), $validStatuses, true)) {
-            $query->where('status', strtolower($status));
+            $lower = strtolower($status);
+            $query->whereHas('order', function($q) use ($lower){
+                $q->where('status', $lower);
+            });
         }
 
         // order, paginate (20 per page contoh)
         $orders = $query->orderBy('created_at', 'desc')
                         ->paginate(20)
-                        ->withQueryString(); // penting: preserve ?status=... & ?q=... di pagination links
+                        ->withQueryString();
 
         return view('seller.recent-order', compact('orders'));
     }
 
-    public function viewReecentOrder(){
+    public function viewRecentOrder(){
         $seller = auth()->user()->sellerStore;
-        $orders  = Order::whereHas('items.product', function($q) use ($seller){
-            $q->where('seller_store', $seller->id);
-        })->with(['items.product', 'user'])
-        ->latest('order_date')
+        $image = $seller->store_logo;
+        $orders = Order::select(
+            'Order_Items.*',
+            'Orders.status',
+            'Orders.order_date',
+            'Users.name as customer_name',
+            DB::raw('GROUP_CONCAT(Products.name SEPARATOR ", ") as product_names'),
+            DB::raw('SUM(Order_Items.qty) as total_qty'),
+            DB::raw('SUM(Order_Items.subtotal) as total_subtotal')
+        )
+        ->join('Order_Items', 'Orders.id', '=', 'Order_Items.order_id')
+        ->join('Products', 'Order_Items.product_id', '=', 'Products.id')
+        ->join('Users', 'Orders.user_id', '=', 'Users.id')
+        ->where('Products.seller_store_id', $seller->id)
+        ->groupBy('Orders.id', 'Order_items.id')
+        ->orderBy('Orders.order_date', 'desc')
         ->paginate(10);
-        return view('seller.recent-order', compact('orders'));
+
+        return view('seller.recent-order', compact('orders', 'image'));
+    }
+
+    public function prodJson($id){
+         $order = Order::with(['items','shippingCourier']) // sesuaikan relasi
+            ->findOrFail($id);
+
+        // contoh bentuk data yang ingin kita kirim
+        $data = [
+            'id' => $order->id,
+            'status' => $order->status,
+            'total_amount' => $order->total_amount, // angka
+            'currency' => 'IDR',
+            'courier' => $order->courier_name, // string atau null
+            'tracking_number' => $order->tracking_number,
+            'shipping_cost' => $order->shipping_cost,
+            'shipping_date' => $order->shipping_date ? $order->shipping_date->toDateString() : null,
+            'eta_text' => $order->eta_text ?? null,
+            'available_couriers' => [
+                ['name' => 'JNE'],
+                ['name' => 'J&T'],
+                ['name' => 'SiCepat'],
+                // atau load dari DB/config
+            ],
+            'items' => $order->items->map(function($it){
+                return [
+                    'sku' => $it->sku,
+                    'name' => $it->name,
+                    'qty' => $it->quantity,
+                    'price' => $it->price,
+                ];
+            }),
+        ];
+
+        return response()->json($data);
+    }
+
+    public function update(Request $request, $id){
+        $order = Order::findOrFail($id);
+
+        $validated = $request->validate([
+            'status' => ['nullable','string'],
+            'courier' => ['nullable','string'],
+            'tracking_number' => ['nullable','string'],
+            'shipping_cost' => ['nullable','numeric'],
+            'shipping_date' => ['nullable','date'],
+            'eta_text' => ['nullable','string'],
+        ]);
+
+        $order->status = $validated['status'] ?? $order->status;
+        $order->courier_name = $validated['courier'] ?? $order->courier_name;
+        $order->tracking_number = $validated['tracking_number'] ?? $order->tracking_number;
+        $order->shipping_cost = $validated['shipping_cost'] ?? $order->shipping_cost;
+        $order->shipping_date = $validated['shipping_date'] ?? $order->shipping_date;
+        $order->eta_text = $validated['eta_text'] ?? $order->eta_text;
+
+        $order->save();
+
+        return response()->json(['success' => true, 'message' => 'Order updated', 'order' => $order]);
     }
 
     public function generateTracking(Order $order, $courier){

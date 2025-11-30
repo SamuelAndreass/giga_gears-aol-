@@ -9,7 +9,7 @@
   <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" rel="stylesheet">
   <link href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@400;600;700&display=swap" rel="stylesheet">
 
-  <link rel="stylesheet" href="asset('css/admin.css')}}">
+  <link rel="stylesheet" href="{{asset('css/admin.css')}}">
 
   <style>
     /* --- Layout Fix (Sidebar & Mobile) --- */
@@ -48,12 +48,17 @@
   </style>
 </head>
 <body>
-  
+   @if(session('success'))
+    <div class="alert alert-success alert-dismissible fade show position-fixed top-0 end-0 m-3" role="alert" style="z-index: 1100;">
+      {{ session('success') }}
+      <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+    </div>
+  @endif
   <div class="container-fluid p-0 d-flex" style="min-height: 100vh; overflow-x: hidden;">
     
     <aside class="admin-side" id="adminSidebar">
         <a href="dashboard.html" class="brand-link" aria-label="GigaGears">
-          <img src="{{asset('assets/logo GigaGears.png')}}" alt="GigaGears" class="brand-logo">
+          <img src="{{asset('images/logo GigaGears.png')}}" alt="GigaGears" class="brand-logo">
         </a>
 
         <nav class="nav flex-column nav-admin">
@@ -65,9 +70,12 @@
           <a class="nav-link active" href="{{ route('admin.shipping.index') }}"><i class="bi bi-truck"></i>Shipping Settings</a>
         </nav>
 
-        <div class="mt-auto pb-4 px-3">
-          <button class="btn btn-logout w-100"><i class="bi bi-box-arrow-right me-1"></i> Log Out</button>
+        <div class="mt-auto pb-4 px-3 pt-3 border-top">
+          <a class="btn btn-logout w-100" href="#" onclick="event.preventDefault();document.getElementById('logout-form').submit();"><i class="bi bi-box-arrow-right me-1"></i> Log Out</a>
         </div>
+        <form id="logout-form" action="{{ route('logout') }}" method="POST" style="display: none;">
+            @csrf
+        </form>
     </aside>
 
     <main class="main-wrap flex-grow-1" style="min-width: 0;">
@@ -101,24 +109,27 @@
 
 
         <div id="shippingListContainer">
-          @foreach($shippings as $item)
+          @forelse($shippings as $item)
            <div class="ship-card ${item.status === 'Inactive' ? 'inactive' : ''}">
                 <div class="d-flex justify-content-between align-items-center mb-4 border-bottom pb-3">
                     <h4 class="h5 fw-bold mb-0">{{ $item->name }}</h4>
                     <div class="btn-group">
-                        <button class="btn btn-sm btn-outline-orange px-3"onclick="openEditModal(@json([
-                            'id' => $item->id,
-                            'name' => $item->name,
-                            'service_type' => $item->service_type,
-                            'custom_service' => $item->custom_service,
-                            'base_rate' => (float)$item->base_rate,
-                            'per_kg' => (float)$item->per_kg,
-                            'min_delivery_days' => (int)$item->min_delivery_days,
-                            'max_delivery_days' => (int)$item->max_delivery_days,
-                            'coverage' => $item->coverage,
-                            'status' => $item->status,
-                                ]) )"
-                                data-bs-toggle="modal" data-bs-target="#editModal">
+                        <button class="btn btn-sm btn-outline-orange px-3"
+                          data-item='{{ base64_encode(json_encode([
+                              "id" => $item->id,
+                              "name" => $item->name,
+                              "service_type" => $item->service_type,
+                              "custom_service" => $item->custom_service,
+                              "base_rate" => (float) $item->base_rate,
+                              "per_kg" => (float) $item->per_kg,
+                              "min_delivery_days" => (int) $item->min_delivery_days,
+                              "max_delivery_days" => (int) $item->max_delivery_days,
+                              "coverage" => $item->coverage,
+                              "status" => $item->status,
+                          ])) }}'
+                          onclick="openEditModalFromButton(this)"
+                          data-bs-toggle="modal" data-bs-target="#editModal">
+
                             <i class="bi bi-pencil-square me-1"></i> Edit
                         </button>
                         @if($item->status === 'Active')
@@ -169,13 +180,15 @@
                     </div>
                 </div>
             </div>
+          @empty
+            <div class="alert alert-info">
+                No shipping methods found. Please add a shipping method.
+            </div>
+          @endforelse
         </div>
 
         <div class="d-flex justify-content-end mt-4">
-            <nav><ul class="pagination pagination-sm mb-0" id="pager">
-                <li class="page-item active"><a class="page-link" href="#">1</a></li>
-                <li class="page-item"><a class="page-link" href="#">2</a></li>
-            </ul></nav>
+            {{ $shippings->links() }}
         </div>
 
         <p class="text-center mt-5 foot small mb-0">© 2025 GigaGears. All rights reserved.</p>
@@ -242,7 +255,7 @@
             <div class="row g-3 mb-3">
               <div class="col-md-6">
                 <label class="form-label small text-muted">Coverage</label>
-                <select name="coverage" class="form-select" disabled>
+                <select name="coverage" class="form-select" readonly>
                   <option selected value="Domestic (Indonesia)">Domestic (Indonesia)</option>
                 </select>
               </div>
@@ -258,37 +271,59 @@
   </div>
   <!-- Script to handle add form submission via AJAX -->
   <script>
-    document.getElementById('addShippingForm').addEventListener('submit', function(e){
+      document.getElementById('addShippingForm').addEventListener('submit', async function(e){
         e.preventDefault();
+        const form = this;
+        const formData = new FormData(form);
 
-        let formData = new FormData(this);
-
-        fetch("{{ route('admin.shipping.store') }}", {
+        try {
+          const res = await fetch("{{ route('admin.shipping.store') }}", {
             method: "POST",
             headers: {
-                "X-CSRF-TOKEN": "{{ csrf_token() }}",
+              "X-CSRF-TOKEN": "{{ csrf_token() }}",
+              'Accept': 'application/json' // minta JSON back
+              // NOTE: jangan set 'Content-Type' saat menggunakan FormData
             },
+            credentials: 'same-origin', // kirim cookie session (important)
             body: formData
-        })
-        .then(res => res.json())
-        .then(data => {
-            if(data.success){
-                alert(data.message);
+          });
 
-                // Tutup modal
-                let modal = bootstrap.Modal.getInstance(document.getElementById('addModal'));
-                modal.hide();
+          // jika server meng-redirect, tangkap dulu (debug)
+          if (res.redirected || res.status === 302) {
+            const loc = res.headers.get('Location') || '(no Location header)';
+            const text = await res.text();
+            throw new Error(`Unexpected redirect (status ${res.status}) to ${loc}. Response preview:\n\n${text.slice(0,400)}`);
+          }
 
-                // Reset form
-                document.getElementById('addShippingForm').reset();
+          const ct = res.headers.get('content-type') || '';
+          if (!ct.includes('application/json')) {
+            const text = await res.text();
+            throw new Error('Expected JSON but server returned HTML/text: ' + text.slice(0,400));
+          }
 
-                // Reload page atau update tabel secara AJAX
-                location.reload();
-            }
-        })
-        .catch(err => console.error(err));
-    });
+          const data = await res.json();
+
+          if (data.success) {
+            alert(data.message);
+            const modal = bootstrap.Modal.getInstance(document.getElementById('addModal'));
+            if (modal) modal.hide();
+            form.reset();
+            location.reload();
+          } else if (data.errors) {
+            // contoh menampilkan error validasi
+            console.error('Validation errors:', data.errors);
+            alert('Validation error: ' + JSON.stringify(data.errors));
+          } else {
+            console.log('Response:', data);
+          }
+
+        } catch (err) {
+          console.error('Request failed:', err);
+          alert('Request failed: ' + err.message);
+        }
+      });
   </script>
+
 
 
   <div class="modal fade" id="editModal" tabindex="-1" aria-hidden="true">
@@ -355,40 +390,230 @@
   </div>
   <!--- Script to handle edit form submission via AJAX -->
   <script>
-    document.getElementById('editShippingForm').addEventListener('submit', function(e){
-        e.preventDefault();
 
-        const id = this.getAttribute('data-id');
-        const formData = new FormData(this);
+    /**
+     * Robust JS for Edit Shipping Modal
+     * - Decodes base64 data-item JSON on button and fills the form
+     * - Handles "custom" service_type visibility
+     * - Submits form via fetch with FormData and X-HTTP-Method-Override: PUT
+     * - Expects JSON responses (422 for validation, success true on OK)
+     */
 
-        // Karena name berbeda dari DB, ubah key agar sesuai:
-        formData.set('min_delivery_days', formData.get('min_delivery_days1'));
-        formData.set('max_delivery_days', formData.get('max_delivery_days1'));
-        formData.delete('min_delivery_days1');
-        formData.delete('max_delivery_days1');
+    /* ===== Helpers ===== */
+    function safeJsonParse(str) {
+      try { return JSON.parse(str); } catch (e) { return null; }
+    }
 
-        fetch(`/admin/shipping/${id}`, {
-            method: "POST",
-            headers: {
-                "X-CSRF-TOKEN": "{{ csrf_token() }}",
-                "X-HTTP-Method-Override": "PUT"
-            },
-            body: formData
-        })
-        .then(res => res.json())
-        .then(data => {
-            if (data.success) {
-                alert(data.message);
+    function decodeDataItem(b64) {
+      try {
+        // Some browsers require padding; atob usually works as base64 from server
+        const json = atob(b64);
+        return safeJsonParse(json);
+      } catch (err) {
+        console.error('Failed to decode data-item base64:', err);
+        return null;
+      }
+    }
 
-                let modal = bootstrap.Modal.getInstance(document.getElementById('editModal'));
-                modal.hide();
+    /* ===== Open modal from button =====
+      Buttons have data-item="<base64(json)>"
+      e.g. onclick="openEditModalFromButton(this)"
+    */
+    function openEditModalFromButton(btn) {
+      if (!btn) return console.error('openEditModalFromButton: button is null');
+      const b64 = btn.getAttribute('data-item') || btn.dataset.item;
+      if (!b64) return console.error('openEditModalFromButton: no data-item attribute found');
 
-                this.reset();
-                location.reload();
+      const data = decodeDataItem(b64);
+      if (!data) return console.error('openEditModalFromButton: decoded data invalid');
+
+      openEditModal(data);
+    }
+
+    /* ===== Toggle custom service input when select changes ===== */
+    function toggleCustomServiceUpdate(selectEl) {
+      const customInput = document.getElementById('customEdit');
+      if (!selectEl) return;
+      if (selectEl.value === 'custom') {
+        customInput.classList.remove('d-none');
+        customInput.required = true;
+      } else {
+        customInput.classList.add('d-none');
+        customInput.required = false;
+        customInput.value = ''; // clear stale value
+      }
+    }
+
+    /* ===== Fill the edit form and show modal ===== */
+    function openEditModal(data) {
+      if (!data) return console.error('openEditModal: data required');
+
+      const form = document.getElementById('editShippingForm');
+      if (!form) return console.error('openEditModal: editShippingForm not found');
+
+      // Attach data-id for submit to use
+      form.setAttribute('data-id', data.id);
+
+      // Helper to set form element safely
+      const setField = (name, value) => {
+        // prefer form.elements[name] (works for inputs/selects/textareas)
+        let el = form.elements[name];
+        if (!el) el = form.querySelector(`[name="${name}"]`);
+        if (el) {
+          // For select, ensure we pick existing option if possible
+          if (el.tagName === 'SELECT') {
+            const opt = Array.from(el.options).find(o => o.value === String(value));
+            if (opt) el.value = value;
+            else {
+              // if value not found, and it's "custom", set to custom and populate custom input
+              if (String(value) === 'custom') el.value = 'custom';
+              else {
+                // keep select as-is (or choose first non-disabled option)
+                // but still set a hidden fallback if available
+              }
             }
-        })
-        .catch(err => console.error(err));
+          } else {
+            el.value = (value !== undefined && value !== null) ? value : '';
+          }
+        } else {
+          // fallback: hidden input (useful when original select is disabled in markup)
+          const hidden = form.querySelector(`input[type="hidden"][name="${name}"]`);
+          if (hidden) hidden.value = (value !== undefined && value !== null) ? value : '';
+        }
+      };
+
+      // Set values (names must match form element names)
+      setField('name', data.name);
+      setField('service_type', data.service_type);
+      // handle custom service visibility and value
+      const customInput = document.getElementById('customEdit');
+      if (String(data.service_type) === 'custom') {
+        if (customInput) {
+          customInput.classList.remove('d-none');
+          customInput.required = true;
+          setField('custom_service', data.custom_service ?? '');
+        }
+      } else {
+        if (customInput) {
+          customInput.classList.add('d-none');
+          customInput.required = false;
+          setField('custom_service', ''); // clear
+        }
+      }
+
+      setField('base_rate', data.base_rate);
+      setField('per_kg', data.per_kg);
+      setField('min_delivery_days1', data.min_delivery_days);
+      setField('max_delivery_days1', data.max_delivery_days);
+
+      // coverage — if you have hidden input named coverage, populate it
+      const covHidden = form.querySelector('input[type="hidden"][name="coverage"]');
+      if (covHidden && data.coverage !== undefined) covHidden.value = data.coverage;
+
+      // show modal (safe: get existing Modal instance or create one)
+      const modalEl = document.getElementById('editModal');
+      const modal = bootstrap.Modal.getInstance(modalEl) || new bootstrap.Modal(modalEl);
+      modal.show();
+    }
+
+    /* ===== Submit handler =====
+      Uses FormData, sets min/max keys, sends PUT via method override
+    */
+    (function attachEditFormSubmit() {
+      const form = document.getElementById('editShippingForm');
+      if (!form) return console.warn('attachEditFormSubmit: form not found');
+
+      form.addEventListener('submit', async function (e) {
+        e.preventDefault();
+        const id = this.getAttribute('data-id');
+        if (!id) return alert('Missing shipping ID. Try re-opening the edit modal.');
+
+        try {
+          const formData = new FormData(this);
+
+          // normalize field names to your API expectation
+          if (formData.has('min_delivery_days1')) {
+            formData.set('min_delivery_days', formData.get('min_delivery_days1'));
+            formData.delete('min_delivery_days1');
+          }
+          if (formData.has('max_delivery_days1')) {
+            formData.set('max_delivery_days', formData.get('max_delivery_days1'));
+            formData.delete('max_delivery_days1');
+          }
+
+          // If coverage is disabled/select not sent, but you have hidden coverage input, ensure it's present
+          // (usually handled by hidden input in markup)
+          // e.g. form contains: <input type="hidden" name="coverage" value="Domestic (Indonesia)">
+          // If not, you can set manually:
+          // formData.set('coverage', 'Domestic (Indonesia)');
+
+          // Add method override for Laravel (PUT)
+          formData.set('_method', 'PUT');
+
+          const res = await fetch(`/admin/shipping/${id}`, {
+            method: 'POST', // send POST with _method=PUT
+            headers: {
+              'X-CSRF-TOKEN': "{{ csrf_token() }}", // blade will render token
+              'Accept': 'application/json'
+              // DO NOT set Content-Type when sending FormData
+            },
+            credentials: 'same-origin', // include cookies/session
+            body: formData
+          });
+
+          // Handle redirect (if server incorrectly redirects)
+          if (res.redirected || res.status === 302) {
+            const location = res.headers.get('Location') || '(no Location header)';
+            const text = await res.text();
+            throw new Error(`Server redirected to ${location}. Response preview:\n${text.slice(0,300)}`);
+          }
+
+          // If Laravel validation fails it typically returns 422 with JSON
+          if (res.status === 422) {
+            const err = await res.json();
+            console.warn('Validation errors:', err);
+            const messages = (err.errors) ? Object.values(err.errors).flat().join('\n') : JSON.stringify(err);
+            return alert('Validation failed:\n' + messages);
+          }
+
+          // Expect JSON success
+          const contentType = res.headers.get('content-type') || '';
+          if (!contentType.includes('application/json')) {
+            const text = await res.text();
+            throw new Error('Expected JSON response but got: ' + text.slice(0,400));
+          }
+
+          const data = await res.json();
+
+          if (data.success) {
+            alert(data.message || 'Saved');
+            // hide modal
+            const modal = bootstrap.Modal.getInstance(document.getElementById('editModal'));
+            if (modal) modal.hide();
+            this.reset();
+            // refresh or update UI
+            location.reload();
+          } else {
+            // handle structured error from server
+            console.warn('Server returned non-success:', data);
+            const msg = data.message || JSON.stringify(data);
+            alert('Error: ' + msg);
+          }
+        } catch (err) {
+          console.error('Failed to submit edit form:', err);
+          alert('Request failed: ' + (err.message || err));
+        }
+      }, { passive: false });
+    })();
+
+    /* ===== Optional: Initialize toggles on page load for any prefilled selects ===== */
+    document.addEventListener('DOMContentLoaded', () => {
+      // ensure custom input visibility matches initial select value
+      const select = document.querySelector('#editShippingForm [name="service_type"]');
+      if (select) toggleCustomServiceUpdate(select);
     });
+
+
   </script>
 
   <div class="sidebar-overlay" id="sidebarOverlay"></div>
@@ -438,36 +663,6 @@
     if(btnToggle) btnToggle.addEventListener('click', toggleSidebar);
     if(overlay) overlay.addEventListener('click', toggleSidebar);
 
-
-
-    function openEditModal(data) {
-
-        // Ambil elemen form
-        const form = document.getElementById('editShippingForm');
-
-        // Set action URL
-        form.setAttribute('data-id', data.id);
-
-        // Isi field
-        form.name.value = data.name;
-        form.service_type.value = data.service_type;
-
-        if (data.service_type === 'custom') {
-            document.getElementById('customEdit').classList.remove('d-none');
-            form.custom_service.value = data.custom_service;
-        } else {
-            document.getElementById('customEdit').classList.add('d-none');
-            form.custom_service.value = '';
-        }
-
-        form.base_rate.value = data.base_rate;
-        form.per_kg.value = data.per_kg;
-        form.min_delivery_days1.value = data.min_delivery_days;
-        form.max_delivery_days1.value = data.max_delivery_days;
-
-        const modal = new bootstrap.Modal(document.getElementById('editModal'));
-        modal.show();
-    }
 
 
   </script>

@@ -8,7 +8,7 @@ use App\Models\Shipping;
 class SellerStore extends Model
 {
     //
-    protected $fillable = ['user_id', 'store_name', 'store_logo', 'store_phone', 'store_address', 'status'];
+    protected $fillable = ['user_id', 'store_name', 'store_logo', 'store_phone', 'store_address', 'status', 'store_description', 'city', 'country'];
 
     public function user(){
         return $this->belongsTo(User::class);

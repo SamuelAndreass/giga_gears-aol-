@@ -61,26 +61,34 @@
   </style>
 </head>
 <body>
-  
+  @if(session('success'))
+    <div class="alert alert-success alert-dismissible fade show position-fixed top-0 end-0 m-3" role="alert" style="z-index: 1100;">
+      {{ session('success') }}
+      <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+    </div>
+  @endif
   <div class="container-fluid p-0 d-flex" style="min-height: 100vh; overflow-x: hidden;">
     
     <aside class="admin-side" id="adminSidebar">
         <a href="dashboard.html" class="brand-link" aria-label="GigaGears">
-          <img src="{{assets('assets/logo GigaGears.png')}}" alt="GigaGears" class="brand-logo">
+          <img src="{{asset('images/logo GigaGears.png')}}" alt="GigaGears" class="brand-logo">
         </a>
 
         <nav class="nav flex-column nav-admin">
           <a class="nav-link" href="{{ route('admin.dashboard') }}"><i class="bi bi-grid-1x2"></i>Dashboard</a>
           <a class="nav-link" href="{{ route('admin.customers.index') }}"><i class="bi bi-people"></i>Data Customer</a>
           <a class="nav-link" href="{{ route('admin.sellers.index') }}"><i class="bi bi-person-badge"></i>Data Seller</a>
-          <a class="nav-link" href="{{ route('admin.transactions.index') }}"><i class="bi bi-receipt"></i>Data Transaction</a>
+          <a class="nav-link active" href="{{ route('admin.transactions.index') }}"><i class="bi bi-receipt"></i>Data Transaction</a>
           <a class="nav-link" href="{{ route('admin.products.index') }}"><i class="bi bi-box"></i>Products</a>
-          <a class="nav-link active" href="{{ route('admin.shipping.index') }}"><i class="bi bi-truck"></i>Shipping Settings</a>
+          <a class="nav-link" href="{{ route('admin.shipping.index') }}"><i class="bi bi-truck"></i>Shipping Settings</a>
         </nav>
 
-        <div class="mt-auto pb-4 px-3">
-          <button class="btn btn-logout w-100"><i class="bi bi-box-arrow-right me-1"></i> Log Out</button>
+        <div class="mt-auto pb-4 px-3 pt-3 border-top">
+          <a class="btn btn-logout w-100" href="#" onclick="event.preventDefault();document.getElementById('logout-form').submit();"><i class="bi bi-box-arrow-right me-1"></i> Log Out</a>
         </div>
+        <form id="logout-form" action="{{ route('logout') }}" method="POST" style="display: none;">
+            @csrf
+        </form>
     </aside>
 
     <main class="main-wrap flex-grow-1" style="min-width: 0;">
@@ -112,12 +120,12 @@
                   <th>Customer</th>
                   <th>Seller</th>
                   <th>Product</th>
-                  <th>Amount ($)</th>
+                  <th>Amount</th>
                   <th>Status</th>
                 </tr>
                 </thead>
                 <tbody id="tbodyTrans">
-                  @forelse ($orders as $item)
+                  @forelse ($items as $item)
                     @php
                         $order = $item->order;
                         $product = $item->product;
@@ -130,23 +138,30 @@
                     @endphp
                    <tr>
                       <td class="text-muted fw-semibold small">ORD-{{ $order->id }}</td>
-                      <td class="fw-bold small">{{ $order->order_date->format('M d, y')}}</td>
+                      <td class="fw-bold small">{{ $order->order_date}}</td>
                       <td>{{$customer}}</td>
                       <td>{{ $seller }}</td>
                       <td class="fw-bold text-primary">{{ \Illuminate\Support\Str::limit($product->name, 20) }}</td>
-                      <td class="fw-bold"> $ {{number_format($amount, 2, '.', ',') }}</td>
+                      <td class="fw-bold"> Rp. {{number_format($amount, 2, '.', ',') }}</td>
                       <td><span class="fw-bold small
                           @if($status === 'active' || $status === 'completed') text-success
                           @elseif($status === 'refunded') text-danger
                           @else text-warning
                           @endif">{{ $status }}</span></td>
                     </tr>
+                   @empty
+                    <tr>
+                      <td colspan="7" class="text-center py-4">
+                        <div class="text-muted">No transactions found.</div>
+                      </td>
+                    </tr>
+                  @endforelse
                 </tbody>
             </table>
           </div>
           <div class="d-flex justify-content-between align-items-center px-3 px-md-4 py-3 border-top">
-            <div class="small text-muted"><span id="countInfo">0</span> results</div>
-            <nav><ul class="pagination pagination-sm mb-0" id="pager"></ul></nav>
+            <div class="small text-muted"><span id="countInfo">{{ $items->total() }}</span> results</div>
+            {{ $items->links() }}
           </div>
         </section>
 

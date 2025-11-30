@@ -13,20 +13,16 @@ return new class extends Migration
     {
         Schema::create('shippings', function (Blueprint $table) {
             $table->id();
-            $table->string('name');
-            $table->string('service_type');
+            $table->string('name'); // JNE, J&T, SiCepat
+            $table->string('service_type'); // REG, ECO, SDS, Cargo, Custom
+            $table->string('custom_service')->nullable(); // opsional
             $table->decimal('base_rate', 10, 2);
             $table->decimal('per_kg', 10, 2)->default(0);
             $table->unsignedTinyInteger('min_delivery_days')->nullable();
             $table->unsignedTinyInteger('max_delivery_days')->nullable();
-            $table->string('coverage')->nullable();
+            $table->string('coverage')->default('Domestic (Indonesia)');
             $table->enum('status', ['active', 'inactive'])->default('active');
             $table->timestamps();
-            $table->string('tracking_number')->unique()->nullable();
-            $table->date('shipping_date')->nullable();
-            $table->date('estimated_arrival_date')->nullable();
-            $table->foreignId('order_id')->constrained()->onDelete('cascade');
-            $table->datetime('actual_arrival')->nullable();
         });
     }
 
