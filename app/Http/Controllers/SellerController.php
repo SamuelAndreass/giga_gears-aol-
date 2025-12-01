@@ -2,6 +2,9 @@
 
 namespace App\Http\Controllers;
 
+use Illuminate\Support\Facades\Cache;
+use Carbon\Carbon;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use App\Models\SellerStore;
@@ -12,11 +15,13 @@ use App\Models\OrderItem;
 use App\Models\Product;
 use App\Models\Category;
 use App\Models\Shipping;
+use App\Models\ShippingOrder;
 use Illuminate\Support\Facades\Validator;
 use App\Models\StoreReview;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
-
+use Illuminate\Pagination\LengthAwarePaginator;
+use Illuminate\Pagination\Paginator;
 
 class SellerController extends Controller
 {
@@ -443,33 +448,299 @@ class SellerController extends Controller
     }
 
 
-    public function viewAnalyticsReview(){
+    public function viewAnalyticsReview(Request $request)
+    {
         $seller = auth()->user()->sellerStore;
-        $total_revenue = OrderItem::whereHas('product', fn($q) => $q->where('seller_store_id', $seller->id))
-        ->whereHas('order', fn($q) => $q->where('status', 'completed'))
-        ->select(DB::raw('COALESCE(SUM(price * qty), 0) as total'))
-        ->value('total');
-        $total_order = Order::whereHas('items.product', fn($q)=> $q->where('seller_store_id', $seller->id))
-        ->whereNot('status','cancelled')->count();
-        $product_sold = OrderItem::whereHas('product', fn($q)=> $q->where('seller_store_id', $seller->id))->sum('qty')->whereHas('order', fn($q)=> $q->where('status', 'completed'));
-        $total_customers = Order::whereHas('items.product', fn($q) =>
-        $q->where('seller_store_id', $seller->id))
-        ->whereIn('status', ['completed', 'delivered']) // filter order valid
+        if (!$seller) {
+            abort(403, 'Seller store not found');
+        }
+        $sellerId = $seller->id;
+
+        // total revenue (sum price * qty) for completed orders that include this seller's products
+        $total_revenue = \DB::table('order_items')
+            ->selectRaw('COALESCE(SUM(price * qty), 0) as total')
+            ->whereExists(function ($q) use ($sellerId) {
+                $q->select(\DB::raw(1))
+                ->from('products')
+                ->whereColumn('products.id', 'order_items.product_id')
+                ->where('products.seller_store_id', $sellerId);
+            })
+            ->whereExists(function ($q) {
+                $q->select(\DB::raw(1))
+                ->from('orders')
+                ->whereColumn('orders.id', 'order_items.order_id')
+                ->where('orders.status', 'completed');
+            })
+            ->value('total');
+
+        // total orders that include this seller's products (exclude cancelled)
+        $total_order = \App\Models\Order::whereExists(function ($q) use ($sellerId) {
+            $q->select(\DB::raw(1))
+            ->from('order_items')
+            ->whereColumn('order_items.order_id', 'orders.id')
+            ->whereExists(function ($qq) use ($sellerId) {
+                $qq->select(\DB::raw(1))
+                    ->from('products')
+                    ->whereColumn('products.id', 'order_items.product_id')
+                    ->where('products.seller_store_id', $sellerId);
+            });
+        })->where('status', '!=', 'cancelled')->count();
+
+        // product_sold: sum qty from order_items for this seller where order is completed
+        $product_sold = \App\Models\OrderItem::whereHas('product', function ($q) use ($sellerId) {
+                $q->where('seller_store_id', $sellerId);
+            })
+            ->whereHas('order', function ($q) {
+                $q->where('status', 'completed');
+            })
+            ->sum('qty');
+
+        // total distinct customers who bought (completed or delivered)
+        $total_customers = \App\Models\Order::whereExists(function ($q) use ($sellerId) {
+            $q->select(\DB::raw(1))
+            ->from('order_items')
+            ->whereColumn('order_items.order_id', 'orders.id')
+            ->whereExists(function ($qq) use ($sellerId) {
+                $qq->select(\DB::raw(1))
+                    ->from('products')
+                    ->whereColumn('products.id', 'order_items.product_id')
+                    ->where('products.seller_store_id', $sellerId);
+            });
+        })
+        ->whereIn('status', ['completed'])
         ->distinct()
         ->count('user_id');
-        $best_selliing_prod = OrderItem::whereHas('product' , fn($q)=>$q->where('seller_store_id', $seller->id))->select('product_id', DB::raw('SUM(qty) as sold_items'))->groupBy('product_id')->with(['product:id,name'])->take(5)->get();
-        $topCustomers = Order::select('user_id', DB::raw('SUM(total_amount) as total_spent'), DB::raw('COUNT(*) as total_orders'))->where('store_id', $seller->id)->groupBy('user_id')->orderByDesc('total_spent')->take(6)->with('user:id,name')->get();
 
-        return view('seller.seller-analytics', compact('total_revenue_this_month', 'total_order' ,'product_sold', 'total_customer', 'best_selliing_prod', 'topCustomers'));
+        // best selling products for this seller (top 5)
+        $best_selliing_prod = \App\Models\OrderItem::whereHas('product', function ($q) use ($sellerId) {
+                $q->where('seller_store_id', $sellerId);
+            })
+            ->select('product_id', DB::raw('SUM(qty) as sold_items'))
+            ->groupBy('product_id')
+            ->with(['product:id,name'])
+            ->orderByDesc('sold_items')
+            ->take(5)
+            ->get();
+
+        // top customers (by total spent on this seller's products) - safer using order_items join
+        $topCustomers = \DB::table('order_items')
+            ->select('orders.user_id', DB::raw('SUM(order_items.price * order_items.qty) as total_spent'), DB::raw('COUNT(DISTINCT orders.id) as total_orders'))
+            ->join('orders', 'order_items.order_id', '=', 'orders.id')
+            ->join('products', 'order_items.product_id', '=', 'products.id')
+            ->where('products.seller_store_id', $sellerId)
+            ->where('orders.status', 'completed')
+            ->groupBy('orders.user_id')
+            ->orderByDesc('total_spent')
+            ->take(6)
+            ->get()
+            ->map(function($r){
+                // load user info
+                $user = \App\Models\User::select('id','name')->find($r->user_id);
+                return (object) [
+                    'user_id' => $r->user_id,
+                    'total_spent' => $r->total_spent,
+                    'total_orders' => $r->total_orders,
+                    'user' => $user
+                ];
+            });
+
+        $months = [];
+        $now = Carbon::now()->startOfMonth();
+        for ($i = 0; $i < 12; $i++) {
+            $date = $now->copy()->subMonths($i);
+            $value = $date->format('Y-m');
+            $label = $date->format('M Y');
+            $months[$value] = $label;
+        }
+
+        // default month
+        $month = $request->query('month', now()->format('Y-m'));
+
+        // pass variables — note names must match actual vars
+        return view('seller.seller-analytics', compact(
+            'total_revenue',
+            'total_order',
+            'product_sold',
+            'total_customers',
+            'best_selliing_prod',
+            'topCustomers',
+            'month',
+            'months'
+        ));
+
     }
 
-    public function feedback(){
+    public function data(Request $request)
+    {
         $seller = auth()->user()->sellerStore;
-        $product_feedbacks = ProductReview::whereHas('product', fn($q)=> $q->where('seller_store_id', $seller->id))
-        ->with(['product', 'user'])->latest()->paginate(10);
-        $store_feedbacks = StoreReview::where('seller_store_id', $seller->id)->with(['user'])->latest()->paginate(10);
-        return view('seller.seller-inbox', compact('product_feedbacks', 'store_feedbacks'));
+        if (!$seller) {
+            return response()->json(['error' => 'No seller store'], 403);
+        }
+        $sellerId = $seller->id;
+
+        // month param format: 'YYYY-MM', default now
+        $month = $request->query('month', now()->format('Y-m'));
+        try {
+            $d = Carbon::createFromFormat('Y-m', $month)->startOfMonth();
+        } catch (\Throwable $e) {
+            $d = now()->startOfMonth();
+            $month = $d->format('Y-m');
+        }
+
+        $start = $d->copy()->startOfMonth();
+        $end   = $d->copy()->endOfMonth();
+
+        // build day labels for the month: "01","02",...
+        $daysInMonth = (int)$start->daysInMonth;
+        $labels = [];
+        for ($i = 1; $i <= $daysInMonth; $i++) {
+            $labels[] = str_pad($i, 2, '0', STR_PAD_LEFT);
+        }
+
+        // Query: distinct orders per day that include this seller's products
+        $ordersPerDay = DB::table('orders')
+            ->selectRaw('DATE(orders.created_at) as day, COUNT(DISTINCT orders.id) as cnt')
+            ->join('order_items','order_items.order_id','orders.id')
+            ->join('products','order_items.product_id','products.id')
+            ->where('products.seller_store_id', $sellerId)
+            ->whereBetween('orders.created_at', [$start->toDateTimeString(), $end->toDateTimeString()])
+            ->groupByRaw('DATE(orders.created_at)')
+            ->get()
+            ->keyBy(function($r){ return (new \Carbon\Carbon($r->day))->format('d'); });
+
+        // build data aligned with labels
+        $data = [];
+        foreach ($labels as $lab) {
+            $data[] = isset($ordersPerDay[$lab]) ? (int)$ordersPerDay[$lab]->cnt : 0;
+        }
+
+        // summary: total orders this month (distinct orders involving this seller)
+        $totalOrders = array_sum($data);
+
+
+        $payload = [
+            'labels' => $labels,
+            'data'   => $data,
+            'summary' => [
+                'total_orders' => $totalOrders,
+
+            ],
+        ];
+
+        return response()->json($payload);
     }
+
+    public function feedback(Request $request){
+        // pastikan user punya seller store
+        $user = $request->user();
+        if (! $user || ! $user->sellerStore) {
+            // sesuaikan behaviour (redirect atau 404). Saya kembalikan view kosong.
+            return view('seller.seller-inbox', [
+                'items' => new LengthAwarePaginator([], 0, 10),
+                'total' => 0,
+            ]);
+        }
+
+        $seller = $user->sellerStore;
+        $q = $request->input('q', null);
+        $filter = $request->input('filter', 'all'); // expected: all | review | message
+        $perPage = 10;
+
+        /**
+         * NOTE:
+         * - Saya asumsikan ProductReview memiliki relasi `product` dan `user`, serta kolom `message` (isi teks)
+         * - Saya asumsikan StoreReview memiliki relasi `user`, serta kolom `message`
+         * - Jika nama kolom berbeda (mis. 'comment' / 'content'), ganti 'message' di bawah sesuai schema Anda.
+         */
+
+        // Base queries
+        $productQuery = ProductReview::whereHas('product', function ($query) use ($seller) {
+            $query->where('seller_store_id', $seller->id);
+        })->with(['product', 'user']);
+
+        $storeQuery = StoreReview::where('seller_store_id', $seller->id)->with(['user']);
+
+        // Apply search term
+        if ($q) {
+            $like = "%{$q}%";
+            $productQuery->where(function ($qq) use ($like) {
+                $qq->where('comment', 'like', $like)
+                   ->orWhereHas('user', function ($u) use ($like) {
+                       $u->where('name', 'like', $like);
+                   })
+                   ->orWhereHas('product', function ($p) use ($like) {
+                       $p->where('name', 'like', $like);
+                   });
+            });
+
+            $storeQuery->where(function ($qq) use ($like) {
+                $qq->where('comment', 'like', $like)
+                   ->orWhereHas('user', function ($u) use ($like) {
+                       $u->where('name', 'like', $like);
+                   });
+            });
+        }
+
+        // Apply filter
+        // Assumption: filter 'review' means items that have rating (adjust if your model different)
+        if ($filter === 'review') {
+            // only items that have a rating (if your models don't have rating, change logic)
+            $productQuery->whereNotNull('rating');
+            $storeQuery->whereNotNull('rating');
+        } elseif ($filter === 'comment') {
+            // only items that are messages (no rating)
+            $productQuery->whereNull('rating');
+            $storeQuery->whereNull('rating');
+        }
+
+        // Retrieve collections (we'll merge and sort in PHP)
+        $productItems = $productQuery->get()->map(function ($item) {
+            return (object) [
+                'type' => 'product',
+                'model' => $item,
+                'created_at' => $item->created_at,
+            ];
+        });
+
+        $storeItems = $storeQuery->get()->map(function ($item) {
+            return (object) [
+                'type' => 'store',
+                'model' => $item,
+                'created_at' => $item->created_at,
+            ];
+        });
+
+        // Merge & sort descending by created_at
+        $merged = $productItems->merge($storeItems)->sortByDesc('created_at')->values();
+
+        // Manual paginate the merged collection
+        $page = Paginator::resolveCurrentPage('page') ?: 1;
+        $total = $merged->count();
+        $itemsForCurrentPage = $merged->slice(($page - 1) * $perPage, $perPage)->all();
+
+        $paginated = new LengthAwarePaginator(
+            $itemsForCurrentPage,
+            $total,
+            $perPage,
+            $page,
+            [
+                'path' => Paginator::resolveCurrentPath(),
+                'query' => $request->query(), // mempertahankan q & filter di link pagination
+            ]
+        );
+
+        // Jika request AJAX -> kembalikan partial HTML (rendered view)
+        if ($request->ajax()) {
+            return view('seller.partials.inbox-list', ['items' => $paginated])->render();
+        }
+
+        // Normal full page render
+        return view('seller.seller-inbox', [
+            'items' => $paginated,
+            'total' => $total,
+        ]);
+    }
+    
     
     public function replyFeedback(Request $request, ProductReview $review){
         $seller = auth()->user()->sellerStore;
@@ -503,46 +774,50 @@ class SellerController extends Controller
 
     public function ship(Request $request, $id)
     {
-        // RETURN JSON ON VALIDATION ERRORS
-        try {
-            $data = $request->validate([
-                'courier' => 'required|string|max:255',
-                'tracking_number' => 'nullable|string|max:120',
-                'shipping_cost' => 'required|numeric',
-                'eta_end' => 'nullable|date',
-            ]);
-        } catch (\Illuminate\Validation\ValidationException $e) {
-            return response()->json(['success' => false, 'errors' => $e->validator->errors()], 422);
-        }
+        // validasi
+        $data = $request->validate([
+            'courier' => 'required|string|max:255', // name of courier/service
+            'tracking_number' => 'nullable|string|max:120',
+            'shipping_cost' => 'required|numeric|min:0',
+            'eta_end' => 'nullable|date',
+        ]);
 
         try {
-            $order = \App\Models\Order::findOrFail($id);
+            DB::transaction(function() use ($id, $data, &$shipping) {
+                $order = Order::findOrFail($id);
 
-            // optional: ensure seller owns order
-            // if ($order->seller_store_id !== auth()->user()->sellerStore->id) {
-            //     return response()->json(['success'=>false,'message'=>'Forbidden'],403);
-            // }
+                // find shipping service by name (adjust to your data)
+                $service = Shipping::where('name', $data['courier'])->first();
 
-            DB::transaction(function() use ($order, $data) {
-                // sesuaikan nama kolom di DB-mu
-                $order->courier = $data['courier'];
-                $order->tracking_number = $data['tracking_number'] ?? null;
-                $order->shipping_cost = $data['shipping_cost'];
-                if (!empty($data['eta_end'])) {
-                    $order->estimated_arrival = $data['eta_end'];
-                }
-                $order->shipping_date = now();
-                $order->status = 'shipped';
-                $order->save();
+                // create or update a single shipping record per order
+                $shipping = ShippingOrder::updateOrCreate(
+                    ['order_id' => $order->id],
+                    [
+                        'shipping_id' => $service->id ?? null,
+                        'tracking_number' => $data['tracking_number'] ?? null,
+                        'shipping_date' => now()->toDateString(),
+                        'estimated_arrival_date' => $data['eta_end'] ?? null,
+                        'shipping_cost' => $data['shipping_cost'],
+                    ]
+                );
+
+                // update order status & optional duplicate fields on order
+                $order->update([
+                    'status' => 'shipped',
+                    'shipping_cost' => $shipping->shipping_cost,
+                ]);
             });
 
-            return response()->json(['success' => true, 'order_id' => $order->id]);
+            // kembalikan data shipping agar UI bisa update tanpa reload
+            return response()->json([
+                'success' => true,
+                'shipping' => $shipping->fresh()->load('shipping')
+            ]);
         } catch (\Throwable $e) {
-            Log::error('ship order failed', [
+            Log::error('Ship order failed', [
                 'order_id' => $id,
                 'payload' => $request->all(),
-                'error' => $e->getMessage(),
-                'trace' => $e->getTraceAsString(),
+                'error' => $e->getMessage()
             ]);
 
             return response()->json([

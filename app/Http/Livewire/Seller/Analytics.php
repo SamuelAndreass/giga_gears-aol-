@@ -79,6 +79,11 @@ class OrdersOverTime extends Component
 
     public function render()
     {
-        return view('livewire.seller.seller-analytics');
+        return view('livewire.seller.seller-analytics', [
+            'months' => $this->months,
+            'chartData' => $this->chartData,
+            'month' => $this->month,
+            'summary' => $this->summary
+        ]);
     }
 }

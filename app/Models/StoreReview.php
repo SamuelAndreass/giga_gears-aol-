@@ -10,6 +10,6 @@ class StoreReview extends Model
     protected $casts = ['rating' => 'integer', 'is_verified' => 'boolean'];
 
     public function store(){ return $this->belongsTo(SellerStore::class);}
-    public function customer(){ return $this->belongsTo(User::class);}
+    public function user(){ return $this->belongsTo(User::class);}
 
 }

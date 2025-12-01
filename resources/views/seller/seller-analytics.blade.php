@@ -21,17 +21,17 @@
     <!-- ===== SIDEBAR ===== -->
     <aside class="col-12 col-lg-2 side d-none d-lg-block">
       <a href="dashboard.html" class="brand-link" aria-label="GigaGears">
-        <img src="../assets/gigagears-logo.png" alt="GigaGears" class="brand-logo">
+        <img src="{{ asset('images/logo GigaGears.png') }}" alt="GigaGears" class="brand-logo">
       </a>
 
         <nav class="nav flex-column nav-gg">
           <a class="nav-link" href="{{ route('seller.index') }}"><i class="bi bi-grid-1x2"></i>Dashboard</a>
           <a class="nav-link" href="{{ route('seller.orders') }}"><i class="bi bi-bag"></i>Order</a>
-          <a class="nav-link active" href="{{ route('seller.products') }}"><i class="bi bi-box"></i>Products</a>
-          <a class="nav-link" href="{{ route('seller.analytics') }}"><i class="bi bi-bar-chart"></i>Analytics & Report</a>
+          <a class="nav-link " href="{{ route('seller.products') }}"><i class="bi bi-box"></i>Products</a>
+          <a class="nav-link active" href="{{ route('seller.analytics') }}"><i class="bi bi-bar-chart"></i>Analytics & Report</a>
           <a class="nav-link" href="{{ route('seller.inbox') }}"><i class="bi bi-inbox"></i>Inbox</a>
           <hr>
-          <a class="nav-link" href="{{ route('seller.settings.index')}}"><i class="bi bi-gear"></i>Settings</a>
+          <a class="nav-link" href="{{ route('settings.index')}}"><i class="bi bi-gear"></i>Settings</a>
         </nav>
 
       <div class="mt-4">
@@ -61,7 +61,7 @@
         <div class="col-12 col-md-6 col-xl-3">
           <div class="gg-card p-3 text-center">
             <div class="small text-muted-gg mb-1">Total Revenue</div>
-            <div id="kpiRevenue" class="fs-1 fw-black">{{ $total_revenue_this_month }}</div>
+            <div id="kpiRevenue" class="fs-1 fw-black">{{ number_format($total_revenue, 0, ',', '.') }}</div>
           </div>
         </div>
         <div class="col-12 col-md-6 col-xl-3">
@@ -79,7 +79,7 @@
         <div class="col-12 col-md-6 col-xl-3">
           <div class="gg-card p-3 text-center">
             <div class="small text-muted-gg mb-1">New Customers</div>
-            <div id="kpiCustomers" class="fs-1 fw-black">{{ $total_customer }}</div>
+            <div id="kpiCustomers" class="fs-1 fw-black">{{ $total_customers }}</div>
           </div>
         </div>
       </section>
@@ -91,14 +91,17 @@
             <h5 class="mb-0">Orders Over Time</h5>
           </div>
           <div class="col-lg-4 d-flex justify-content-end align-items-center gap-2">
-            <select wire:model.debounce.250ms="month" class="form-select form-select-sm">
+            <select id="monthSelect" class="form-select form-select-sm">
               @foreach($months as $value => $label)
-                <option value="{{ $value }}">{{ $label }}</option>
+                <option value="{{ $value }}" @if($value === $month) selected @endif>{{ $label }}</option>
               @endforeach
-                </select>
+            </select>
           </div>
         </div>
-        <canvas id="ordersChart" height="120"></canvas>
+        <div>
+            <canvas id="ordersChart" height="120"></canvas>
+        </div>
+        
       </section>
 
       <!-- Bottom row: Best-Selling & Top Customer -->
@@ -121,12 +124,14 @@
                     </thead>
                     <tbody id="bestList">
                       @forelse($best_selliing_prod as $prod)
-                      <td> {{ $prod->product->name }} </td>
-                      <td> {{ $prod->sold_items }} </td>
-                      @empty`
-                      <tr>
-                          <td colspan="2" class="text-center text-muted">Belum ada penjualan.</td>
-                      </tr>
+                        <tr>
+                          <td> {{ $prod->product->name }} </td>
+                          <td> {{ $prod->sold_items }} </td>
+                        </tr>
+                      @empty
+                        <tr>
+                            <td colspan="2" class="text-center text-muted">Belum ada penjualan.</td>
+                        </tr>
                       @endforelse
                     </tbody>
                   </table>
@@ -139,19 +144,22 @@
           <div class="gg-card p-3 p-md-4 h-100">
             <h5 class="mb-3">Top Customer</h5>
             <ul id="topCustomer" class="list-unstyled m-0">
-              <li class="d-flex align-items-center justify-content-between border rounded-3 p-2 mb-2">
-                <div class="d-flex align-items-center gap-2">
-                  @foreach($topCustomers as $i => $cust)
-                  <span class="badge bg-primary-subtle text-primary">{{ $i+1 }}</span>
-                  <div>
-                    <div class="fw-semibold">{{ $cust->user->name }}</div>
-                    <small class="text-muted">Rp. {{ number_format($cust->total_spent, 2) }}</small>
+              @forelse($topCustomers as $i => $cust)
+                <li class="d-flex align-items-center justify-content-between border rounded-3 p-2 mb-2">
+                  <div class="d-flex align-items-center gap-2">
+                    <span class="badge bg-primary-subtle text-primary">{{ $i+1 }}</span>
+                    <div>
+                      <div class="fw-semibold">{{ $cust->user->name }}</div>
+                      <small class="text-muted">Rp. {{ number_format($cust->total_spent, 2) }}</small>
+                      </div>
                     </div>
+                  <div class="text-end">
+                  <div class="fw-semibold">{{ $cust->total_orders }} Orders</div>
                   </div>
-                <div class="text-end">
-                <div class="fw-semibold">{{ $cust->total_orders }} Orders</div>
-                </div>
-              </li>
+                </li>
+              @empty
+                <li class="text-center text-muted">Belum ada customer.</li>
+              @endforelse
             </ul>
           </div>
         </div>
@@ -167,43 +175,106 @@
 
 <script>
 document.addEventListener('DOMContentLoaded', function () {
+  // ambil labels & data dari PHP
+  const labels = @json($best_selliing_prod->map(fn($p) => optional($p->product)->name ?? 'Unknown')->toArray());
+  const data = @json($best_selliing_prod->pluck('sold_items')->toArray());
 
-    const labels = @json($topProducts->pluck('product.name'));
-    const data = @json($topProducts->pluck('total_sold'));
+  const ctx = document.getElementById('bestPie');
+  if (!ctx) return; // safety
 
-    const ctx = document.getElementById('topProductsChart').getContext('2d');
-    
-    const colors = [
-      '#5DADE2', '#F1948A', '#F8C471', 
-      '#7FB3D5', '#A569BD', '#48C9B0'
-    ];
+  const colors = [
+    '#5DADE2', '#F1948A', '#F8C471', '#7FB3D5', '#A569BD', '#48C9B0'
+  ];
 
-    new Chart(ctx, {
-        type: 'doughnut',
-        data: {
-            labels: labels,
-            datasets: [{
-                data: data,
-                backgroundColor: colors.slice(0, labels.length),
-                borderWidth: 3,
-                borderColor: '#fff',
-                hoverOffset: 6
-            }]
-        },
-        options: {
-            plugins: {
-                legend: {
-                    position: 'right',
-                    labels: {
-                        boxWidth: 20,
-                    }
-                }
-            },
-            cutout: "55%", // ini bikin lubang tengah (donut)
-        }
-    });
-
+  new Chart(ctx, {
+    type: 'doughnut',
+    data: {
+      labels: labels,
+      datasets: [{
+        data: data,
+        backgroundColor: colors.slice(0, labels.length),
+        borderWidth: 2,
+        borderColor: '#fff',
+        hoverOffset: 8
+      }]
+    },
+    options: {
+      plugins: {
+        legend: { position: 'right', labels: { boxWidth: 16 } }
+      },
+      cutout: '60%',
+      maintainAspectRatio: false,
+    }
+  });
 });
+
+document.addEventListener('DOMContentLoaded', function () {
+  const monthSelect = document.getElementById('monthSelect');
+  const totalOrdersEl = document.getElementById('kpiOrders');
+
+  const canvas = document.getElementById('ordersChart');
+  if (!canvas) return; // no chart canvas
+  const ctx = canvas.getContext('2d');
+
+  // chart config (same as before)
+  const chartConfig = {
+    type: 'line',
+    data: { labels: [], datasets: [{ label: 'Orders', data: [], fill: false, tension: 0.3 }] },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      scales: { x: { display: true }, y: { beginAtZero: true, precision: 0 } }
+    }
+  };
+
+  let ordersChart = new Chart(ctx, chartConfig);
+
+  async function fetchDataForMonth(month) {
+    const url = new URL("{{ route('seller.orders-over-time.data') }}", window.location.origin);
+    url.searchParams.set('month', month);
+
+    try {
+      const res = await fetch(url.toString(), { headers: { 'Accept': 'application/json' }, credentials: 'same-origin' });
+      if (!res.ok) {
+        const text = await res.text();
+        throw new Error('Server error: ' + res.status + ' — ' + text);
+      }
+      return await res.json();
+    } catch (err) {
+      console.error('Fetch error:', err);
+      return null;
+    }
+  }
+
+  function safeSetText(el, value) {
+    if (!el) return;
+    el.textContent = value;
+  }
+
+  function updateChart(payload) {
+    if (!payload) return;
+    ordersChart.data.labels = payload.labels || [];
+    ordersChart.data.datasets[0].data = payload.data || [];
+    ordersChart.update();
+
+    // show summary (safe)
+    safeSetText(totalOrdersEl, payload.summary?.total_orders ?? '-');
+  }
+
+  // initial load
+  const initialMonth = (monthSelect && monthSelect.value) ? monthSelect.value : (new Date()).toISOString().slice(0,7);
+  fetchDataForMonth(initialMonth).then(updateChart);
+
+  // on change
+  if (monthSelect) {
+    monthSelect.addEventListener('change', function (e) {
+      const selected = e.target.value;
+      safeSetText(totalOrdersEl, 'Loading...');
+      fetchDataForMonth(selected).then(updateChart);
+    });
+  }
+});
+
 </script>
 
 </body>

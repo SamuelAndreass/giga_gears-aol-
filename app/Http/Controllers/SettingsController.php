@@ -24,7 +24,7 @@ class SettingsController extends Controller
 
         if (! $store) abort(404, 'Store tidak ditemukan.');
 
-        return view('seller.settings.index', [
+        return view('seller.seller-setting', [
             'user' => $user,
             'store' => $store,
         ]);
