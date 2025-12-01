@@ -16,12 +16,19 @@
   <link rel="stylesheet" href="{{asset('css/styles.css')}}">
 </head>
 <body>
+  @if(session('success'))
+    <div class="alert alert-success alert-dismissible fade show position-fixed top-0 end-0 m-3" role="alert" style="z-index: 1100;">
+      {{ session('success') }}
+      <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+    </div>
+  @endif
+  
   <div class="container-fluid">
     <div class="row g-0">
       <!-- ===== SIDEBAR ===== -->
       <aside class="col-12 col-lg-2 side d-none d-lg-block">
         <a href="dashboard.html" class="brand-link" aria-label="GigaGears">
-          <img src="../assets/gigagears-logo.png" alt="GigaGears" class="brand-logo">
+          <img src="{{ asset('images/logo GigaGears.png') }}" alt="GigaGears" class="brand-logo">
         </a>
 
         <nav class="nav flex-column nav-gg">
@@ -31,12 +38,15 @@
           <a class="nav-link" href="{{ route('seller.analytics') }}"><i class="bi bi-bar-chart"></i>Analytics & Report</a>
           <a class="nav-link" href="{{ route('seller.inbox') }}"><i class="bi bi-inbox"></i>Inbox</a>
           <hr>
-          <a class="nav-link" href="{{ route('seller.settings.index')}}"><i class="bi bi-gear"></i>Settings</a>
+          <a class="nav-link" href="{{ route('settings.index')}}"><i class="bi bi-gear"></i>Settings</a>
         </nav>
 
-        <div class="mt-4">
-          <button class="btn btn-outline-danger w-100"><i class="bi bi-box-arrow-right me-1"></i> Log Out</button>
+        <div class="mt-auto pb-4 px-3 pt-3 border-top">
+          <a class="btn btn-logout w-100" href="#" onclick="event.preventDefault();document.getElementById('logout-form').submit();"><i class="bi bi-box-arrow-right me-1"></i> Log Out</a>
         </div>
+        <form id="logout-form" action="{{ route('logout') }}" method="POST" style="display: none;">
+            @csrf
+        </form>
       </aside>
 
       <!-- ===== MAIN ===== -->
@@ -53,7 +63,7 @@
               <i class="bi bi-bell"></i>
             </span>
             <span class="badge-chip d-inline-flex align-items-center gap-2">
-              <span class="rounded-circle bg-white text-primary fw-bold d-inline-flex align-items-center justify-content-center" style="width:28px;height:28px">TW</span>
+              <span class="rounded-circle bg-white text-primary fw-bold d-inline-flex align-items-center justify-content-center" style="width:28px;height:28px"></span>
               @auth {{ Auth::user()->name }} @endauth
             </span>
           </div>
@@ -61,6 +71,7 @@
 
         <!-- FORM WRAP -->
         <form id="productForm" method="post" action="{{ route('seller.add.product') }}" enctype="multipart/form-data" class="row g-3">
+          @csrf
           <!-- A. Basic Information -->
           <section class="gg-card p-3 p-md-4">
             <h6 class="mb-3">A. Basic Information</h6>
@@ -191,9 +202,6 @@
 
           <!-- Actions -->
           <div class="d-flex flex-wrap gap-2">
-            <button type="button" id="btnDraft" class="btn btn-outline-secondary">
-              Save as Draft
-            </button>
             <button type="submit" class="btn btn-primary">
               Publish Product
             </button>
@@ -255,7 +263,7 @@
             <input type="text" name="variants[${i}][name]" placeholder="Variant name (e.g. Color)"
                   class="form-control" value="${data.name ?? ''}" style="max-width:200px;">
             <input type="text" name="variants[${i}][value]" placeholder="Value (e.g. Red)"
-                  class="form-control" value="${data.value ?? ''}">
+                  class="form-control" value="${data.color ?? ''}">
             <input type="number" step="0.01" name="variants[${i}][price]" placeholder="Extra price"
                   class="form-control" value="${data.price ?? ''}" style="max-width:140px;">
             <input type="number" name="variants[${i}][stock]" placeholder="Stock"

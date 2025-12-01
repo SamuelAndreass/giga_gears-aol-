@@ -57,6 +57,9 @@ Route::middleware(['auth', 'ensure.active'])->group(function(){
 
 // seller
 Route::middleware(['auth','ensure.seller', 'ensure.active'])->prefix('seller')->group(function(){
+
+    Route::get('/orders/{id}/ship-data', [SellerController::class, 'shipData'])->name('seller.orders.shipData');
+    Route::post('/orders/{id}/ship', [SellerController::class, 'ship'])->name('seller.orders.ship');
     Route::get('/dashboard', [SellerController::class, 'viewMainDashboard'])->name('seller.index');
     Route::get('/product', [SellerController::class, 'viewProd'])->name('seller.products');
     Route::get('/analytics', [SellerController::class, 'viewAnalyticsReview'])->name('seller.analytics');
@@ -67,7 +70,7 @@ Route::middleware(['auth','ensure.seller', 'ensure.active'])->prefix('seller')->
     Route::post('/update/product/{id}', [SellerController::class, '']);
     Route::post('/update/status', [SellerController::class, 'updateStatus']);
     Route::get('/recent-order', [SellerController::class,'viewRecentOrder'])->name('seller.orders');
-    Route::get('/recent-order/search', [SellerController::class,'search'])->name('seller.recent.order');
+    Route::get('/recent-order/search', [SellerController::class,'viewRecentOrder'])->name('search.seller.orders');
     Route::get('settings', [SettingsController::class, 'index'])->name('settings.index');
     Route::post('settings/owner', [SettingsController::class, 'updateOwner'])->name('settings.owner.update');
     Route::post('settings/store', [SettingsController::class, 'updateStore'])->name('settings.store.update');

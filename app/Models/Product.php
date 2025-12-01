@@ -9,15 +9,15 @@ class Product extends Model
     //
     use HasFactory;
     protected $fillable = [
-        'name', 'description', 'category_id', 'original_price', 'discount_price',
-        'discount_percentage', 'images', 'specifications', 'features',
-        'stock', 'brand', 'rating', 'review_count', 'is_featured', 'status',
-        'verified_at', 'verified_by', 'variants', 'seller_store_id', 'sku', 'weight', 'diameter'
+        'product_code','name','description','category_id','seller_store_id',
+        'original_price','discount_price','discount_percentage','images',
+        'colors','specifications','features','stock','brand','rating','review_count',
+        'is_featured','variants','SKU','weight','diameter','status','created_at','updated_at'
     ];
     protected $casts = [
         'images' => 'array', 'colors' => 'array', 'specifications' => 'array',
         'features' => 'array', 'original_price' => 'decimal:2', 'discount_price' => 'decimal:2',
-        'rating' => 'decimal:1', 'review_count' => 'integer', 'is_featured' => 'boolean', 'stock' => 'integer'
+        'rating' => 'decimal:1', 'review_count' => 'integer', 'is_featured' => 'boolean', 'stock' => 'integer','variants' => 'array'
     ];
     public function category() { return $this->belongsTo(Category::class); }
     public function reviews() { return $this->hasMany(ProductReview::class); }
@@ -25,8 +25,7 @@ class Product extends Model
     public function CartItems(){ return $this->hasMany(CartItem::class);}
     public function sellerStore(){ return $this->belongsTo(SellerStore::class);}
 
-    
-    public function verifiedBy(){ return $this->belongsTo(User::class, 'verified_by'); }
+
     protected static function boot() {
         parent::boot();
         static::saving(function ($product) {

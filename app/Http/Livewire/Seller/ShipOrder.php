@@ -11,8 +11,8 @@ use Carbon\Carbon;
 
 class ShipOrder extends Component
 {
-    public Order $order;
-
+    public ?Order $order = null;
+    public $total = 0;
     public $couriers = [];
     public $courier;
     public $tracking_number;
@@ -22,23 +22,23 @@ class ShipOrder extends Component
     public $eta_text;
     public $shipping_cost;
 
+    protected $listeners = ['open' => 'open'];
+
     protected $rules = [
         'courier' => 'required|string',
         'tracking_number' => 'nullable|string|max:120',
     ];
 
-    public function mount(Order $order)
+    // remove mount(Order $order) — we will load order in open()
+    public function mount()
     {
-        $this->order = $order;
-        $this->authorize('ship', $order);
-
         $this->loadCouriers();
     }
 
     protected function loadCouriers()
     {
         $rows = ShippingService::active()
-            ->select('courier_name')
+            ->select('courier_slug', 'courier_name') // <- ambil slug & name
             ->orderBy('courier_name')
             ->get();
 
@@ -50,7 +50,7 @@ class ShipOrder extends Component
 
     public function updatedCourier($value)
     {
-        $this->authorize('ship', $this->order);
+        if (! $this->order) return;
 
         $service = ShippingService::active()
             ->where('courier_slug', $value)
@@ -61,16 +61,16 @@ class ShipOrder extends Component
             return;
         }
 
-        // Hitung biaya
+        // Hitung berat total (kg)
         $weight = $this->order->items->sum(fn($it) =>
-            ($it->product->weight_kg ?? 0) * $it->qty
+            ($it->product->weight_kg ?? 0) * ($it->qty ?? $it->quantity ?? 0)
         );
 
         $this->shipping_cost = $service->base_rate + ($service->per_kg * $weight);
 
         // Hitung ETA
-        $min = $service->min_delivery_days;
-        $max = $service->max_delivery_days;
+        $min = $service->min_delivery_days ?? 0;
+        $max = $service->max_delivery_days ?? $min;
 
         $this->shipping_date = today()->toDateString();
         $this->eta_start = today()->addDays($min)->toDateString();
@@ -80,16 +80,17 @@ class ShipOrder extends Component
             ? "{$min} hari (Tiba {$this->eta_start})"
             : "{$min}-{$max} hari ({$this->eta_start} — {$this->eta_end})";
 
-        // Generate tracking preview
+        // Generate tracking preview (use slug part if needed)
         $this->tracking_number = strtoupper(substr($value,0,4))
             . "-S" . Auth::id()
-            . "-O" . $this->order->id
+            . "-O" . ($this->order->id ?? '0')
             . "-" . now()->format('YmdHis');
     }
 
     public function ship()
     {
-        $this->authorize('ship', $this->order);
+        if (! $this->order) return;
+
         $this->validate();
 
         $service = ShippingService::active()
@@ -109,18 +110,39 @@ class ShipOrder extends Component
         });
 
         session()->flash('success','Order berhasil dikirim.');
+        $this->dispatchBrowserEvent('notify', ['message' => 'Order berhasil dikirim.']);
+        $this->dispatchBrowserEvent('close-order-update-modal');
+        $this->emit('orderUpdated', $this->order->id);
     }
 
     protected function generateTracking()
     {
-        return strtoupper(substr($this->courier,0,4))
+        return strtoupper(substr($this->courier ?? 'UNK',0,4))
             . "-S" . Auth::id()
-            . "-O" . $this->order->id
+            . "-O" . ($this->order->id ?? '0')
             . "-" . now()->format('YmdHis');
+    }
+
+    public function open($orderId)
+    {
+        $this->order = Order::with(['items.product','user'])->findOrFail($orderId);
+
+        // sum subtotal properly
+        $this->total = (float) $this->order->items->sum('subtotal');
+
+        // populate existing shipping data if any
+        $this->courier = $this->order->courier ?? null;
+        $this->tracking_number = $this->order->tracking_number ?? null;
+        $this->shipping_cost = $this->order->shipping_cost ?? null;
+        $this->shipping_date = optional($this->order->shipping_date)->toDateString() ?? null;
+        $this->eta_text = $this->order->eta_text ?? null;
+
+        $this->dispatchBrowserEvent('open-order-update-modal');
     }
 
     public function render()
     {
-        return view('livewire.seller.recent-order');
+        // view kecil hanya modal
+        return view('livewire.seller.ship-order');
     }
 }
