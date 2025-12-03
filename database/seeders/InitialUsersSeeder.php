@@ -29,6 +29,10 @@ class InitialUsersSeeder extends Seeder
             'email' => 'seller@example.com',
         ]);
 
+        \App\Models\CustomerProfile::firstOrCreate([
+            'user_id' => $seller->id
+        ]);
+
         // Create associated store for this seller
         $store = SellerStore::factory()->create([
             'user_id' => $seller->id,

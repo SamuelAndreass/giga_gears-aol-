@@ -72,8 +72,8 @@ Route::middleware(['auth','ensure.seller', 'ensure.active'])->prefix('seller')->
     Route::get('/recent-order', [SellerController::class,'viewRecentOrder'])->name('seller.orders');
     Route::get('/recent-order/search', [SellerController::class,'viewRecentOrder'])->name('search.seller.orders');
     Route::get('settings', [SettingsController::class, 'index'])->name('settings.index');
-    Route::post('settings/owner', [SettingsController::class, 'updateOwner'])->name('settings.owner.update');
-    Route::post('settings/store', [SettingsController::class, 'updateStore'])->name('settings.store.update');
+    Route::put('settings/owner', [SettingsController::class, 'updateOwner'])->name('settings.owner.update');
+    Route::put('settings/store', [SettingsController::class, 'updateStore'])->name('settings.store.update');
     Route::post('settings/password', [SettingsController::class, 'updatePassword'])->name('settings.password.update');
     Route::get('/seller/orders-over-time/data', [SellerController::class, 'data'])->name('seller.orders-over-time.data');
 });

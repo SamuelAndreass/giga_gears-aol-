@@ -24,50 +24,47 @@ class SettingsController extends Controller
 
         if (! $store) abort(404, 'Store tidak ditemukan.');
 
-        return view('seller.seller-setting', [
+        return view('seller.store-setting', [
             'user' => $user,
             'store' => $store,
         ]);
     }
 
-    /**
-     * Update owner (user) fields: name, email, phone
-     * If email changed -> set email_verified_at = null and dispatch verification (optional)
-     */
     public function updateOwner(UpdateOwnerRequest $request)
     {
-        $user = Auth::user();
-        $validated = $request->validated();
+            $user = Auth::user();
+            $validated = $request->validated();
 
-        DB::beginTransaction();
-        try {
-            $emailChanged = $validated['email'] !== $user->email;
-            $user->name = $validated['owner_name'];
-            $user->email = $validated['email'];
-            if($request->hasFile('owner_photo')){
-                // Hapus foto lama bila ada
-                if ($user->owner_photo && Storage::disk('public')->exists($user->owner_photo)) {
-                    Storage::disk('public')->delete($user->owner_photo);
+            DB::beginTransaction();
+            try {
+                $emailChanged = (isset($validated['owner_email']) && $validated['owner_email'] !== $user->email);
+                $user->name = $validated['owner_name'] ?? $user->name;
+                $user->email = $validated['owner_email'] ?? $user->email;
+
+                if ($request->hasFile('owner_photo')) {
+                    if ($user->avatar_path && Storage::disk('public')->exists($user->avatar_path)) {
+                        Storage::disk('public')->delete($user->avatar_path);
+                    }
+
+                    $path = $request->file('avatar_path')->store('seller_photos', 'public');
+                    $user->avatar_path = $path;
                 }
 
-                $path = $request->file('owner_photo')->store('seller_photos', 'public');
-                $user->owner_photo = $path;
+                if ($emailChanged) {
+                    $user->email_verified_at = null;
+                    // optionally: Notification::send(...) or event(new Registered($user));
+                }
+
+                $user->save();
+                DB::commit();
+
+                $msg = 'Informasi pemilik berhasil diperbarui.' . ($emailChanged ? ' Mohon cek email untuk verifikasi ulang.' : '');
+                return back()->with('success', $msg);
+            } catch (\Throwable $e) {
+                DB::rollBack();
+                \Log::error('UpdateOwner error: '.$e->getMessage(), ['trace' => $e->getTraceAsString()]);
+                return back()->withErrors(['error' => 'Gagal memperbarui data pemilik. Silakan coba lagi.']);
             }
-
-            if ($emailChanged) {
-                // invalidate verification and optionally send new verification
-                $user->email_verified_at = null;
-            }
-
-            $user->save();
-            DB::commit();
-
-            return back()->with('success', 'Informasi pemilik berhasil diperbarui.' . ($emailChanged ? ' Mohon cek email untuk verifikasi ulang.' : ''));
-        } catch (\Throwable $e) {
-            DB::rollBack();
-            \Log::error('UpdateOwner error: '.$e->getMessage(), ['trace' => $e->getTraceAsString()]);
-            return back()->withErrors(['error' => 'Gagal memperbarui data pemilik. Silakan coba lagi.']);
-        }
     }
 
     /**
@@ -76,43 +73,47 @@ class SettingsController extends Controller
      */
     public function updateStore(UpdateStoreRequest $request)
     {
-        $user = Auth::user();
-        $store = $user->sellerStore;
+            $user = Auth::user();
+            $store = $user->sellerStore;
 
-        if (! $store) {
-            return back()->withErrors(['store' => 'Store tidak ditemukan.']);
-        }
-
-        $validated = $request->validated();
-
-        DB::beginTransaction();
-        try {
-            $storeData = [
-                'name' => $validated['store_name'],
-                'address' => array_key_exists('address', $validated) ? $validated['address'] : $store->address,
-                'phone' => array_key_exists('store_phone', $validated) ? $validated['store_phone'] : $store->phone,
-            ];
-
-            if ($request->hasFile('store_logo')) {
-                // Hapus avatar lama bila ada
-                if ($store->store_logo && Storage::disk('public')->exists($store->store_logo)) {
--                    Storage::disk('public')->delete($store->store_logo);
-                }
-
-                $path = $request->file('store_logo')->store('store_logo', 'public');
-                $storeData['store_logo'] = $path;
+            if (! $store) {
+                return back()->withErrors(['store' => 'Store tidak ditemukan.']);
             }
 
-            $store->update($storeData);
+            $validated = $request->validated();
 
-            DB::commit();
+            DB::beginTransaction();
+            try {
+                // Map fields: store_name -> name (DB), store_address -> address, store_phone -> phone, store_logo -> store_logo
+                $storeData = [];
+                if (array_key_exists('store_name', $validated)) {
+                    $storeData['store_name'] = $validated['store_name'];
+                }
+                if (array_key_exists('store_address', $validated)) {
+                    $storeData['store_address'] = $validated['store_address'];
+                }
+                if (array_key_exists('store_phone', $validated)) {
+                    $storeData['store_phone'] = $validated['store_phone'];
+                }
 
-            return back()->with('success', 'Detail toko berhasil diperbarui.');
-        } catch (\Throwable $e) {
-            DB::rollBack();
-            \Log::error('UpdateStore error: '.$e->getMessage(), ['trace' => $e->getTraceAsString()]);
-            return back()->withErrors(['error' => 'Gagal memperbarui data toko. Silakan coba lagi.']);
-        }
+                if ($request->hasFile('store_logo')) {
+                    if ($store->store_logo && Storage::disk('public')->exists($store->store_logo)) {
+                        Storage::disk('public')->delete($store->store_logo);
+                    }
+                    $path = $request->file('store_logo')->store('store_logos', 'public');
+                    $storeData['store_logo'] = $path;
+                }
+
+                $store->update($storeData);
+
+                DB::commit();
+
+                return back()->with('success', 'Detail toko berhasil diperbarui.');
+            } catch (\Throwable $e) {
+                DB::rollBack();
+                \Log::error('UpdateStore error: '.$e->getMessage(), ['trace' => $e->getTraceAsString()]);
+                return back()->withErrors(['error' => 'Gagal memperbarui data toko. Silakan coba lagi.']);
+            }
     }
 
     /**

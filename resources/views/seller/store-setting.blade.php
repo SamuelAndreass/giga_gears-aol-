@@ -13,7 +13,7 @@
   <link href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@400;600;700&display=swap" rel="stylesheet">
 
   <!-- App CSS (punyamu) -->
-  <link rel="stylesheet" href="{{asset('css/styles.css')}}">
+  <link rel="stylesheet" href="{{ asset('css/styles.css') }}">
 </head>
 <body>
   <div class="container-fluid">
@@ -22,18 +22,17 @@
       <!-- ===== SIDEBAR (konsisten) ===== -->
       <aside class="col-12 col-lg-2 side d-none d-lg-block">
         <a href="dashboard.html" class="brand-link" aria-label="GigaGears">
-          <img src="../assets/gigagears-logo.png" alt="GigaGears" class="brand-logo">
+          <img src="{{ asset('images/logo GigaGears.png') }}" alt="GigaGears" class="brand-logo">
         </a>
 
         <nav class="nav flex-column nav-gg">
-          <a class="nav-link" href="dashboard.html"><i class="bi bi-grid-1x2"></i>Dashboard</a>
-          <a class="nav-link" href="order.html"><i class="bi bi-bag"></i>Order</a>
-          <a class="nav-link" href="product.html"><i class="bi bi-box"></i>Products</a>
-          <a class="nav-link" href="balance.html"><i class="bi bi-wallet2"></i>Balance & Withdraw</a>
-          <a class="nav-link" href="analytics.html"><i class="bi bi-bar-chart"></i>Analytics & Report</a>
-          <a class="nav-link" href="inbox.html"><i class="bi bi-inbox"></i>Inbox</a>
+          <a class="nav-link" href="{{ route('seller.index') }}"><i class="bi bi-grid-1x2"></i>Dashboard</a>
+          <a class="nav-link" href="{{ route('seller.orders') }}"><i class="bi bi-bag"></i>Order</a>
+          <a class="nav-link" href="{{ route('seller.products') }}"><i class="bi bi-box"></i>Products</a>
+          <a class="nav-link" href="{{ route('seller.analytics') }}"><i class="bi bi-bar-chart"></i>Analytics & Report</a>
+          <a class="nav-link" href="{{ route('seller.inbox') }}"><i class="bi bi-inbox"></i>Inbox</a>
           <hr>
-          <a class="nav-link active" href="settings.html"><i class="bi bi-gear"></i>Settings</a>
+          <a class="nav-link active" href="{{ route('settings.index')}}"><i class="bi bi-gear"></i>Settings</a>
         </nav>
 
         <div class="mt-4">
@@ -50,11 +49,6 @@
             <div class="small opacity-75 mb-1">Account & Store</div>
             <h1 class="wc-title mb-0">Settings</h1>
           </div>
-          <div class="d-flex gap-2">
-            <span class="badge-chip d-inline-flex align-items-center gap-2">
-              <span class="rounded-circle bg-white text-primary fw-bold d-inline-flex align-items-center justify-content-center" style="width:28px;height:28px">TW</span> TechnoWorld
-            </span>
-          </div>
         </div>
 
         <!-- Content -->
@@ -63,7 +57,7 @@
           <!-- ========= KIRI ========= -->
           <div class="col-12 col-xl-12">
             <!-- Profil Toko -->
-          <form  method="POST" action="{{ route('sller.settings.owner.update') }}" enctype="multipart/form-data">
+          <form method="POST" action={{ route('settings.owner.update') }} enctype="multipart/form-data">
             @csrf
             @method('put')
             <section class="gg-card p-3 p-md-4 mb-3">
@@ -73,16 +67,14 @@
                   <i class="bi bi-save me-1"></i>Save
                 </button>
               </div>
-
               <div class="row g-3 align-items-center">
                 <div class="col-auto">
                   <div class="position-relative">
-                    <img id="avatarPreview" src="{{ $user->photoProfile ? asset('storage/' . $user->photoProfile) : 'https://i.pravatar.cc/96' }}" class="rounded-circle border" alt="avatar" style="width:80px;height:80px;object-fit:cover">
-                    <button class="btn btn-sm btn-light position-absolute bottom-0 end-0 rounded-circle border" id="btnAvatarPick" title="Change avatar" type="button" aria-label="Change avatar">
+                    <img id="avatarPreviewOwner" src="{{ $user->photoProfile ? asset('storage/' . $user->photoProfile) : asset ('images/profile-large.png') }}" class="rounded-circle border" alt="avatar" style="width:80px;height:80px;object-fit:cover">
+                    <button class="btn btn-sm btn-light position-absolute bottom-0 end-0 rounded-circle border" id="btnAvatarPickOwner" title="Change avatar" type="button" aria-label="Change avatar">
                       <i class="bi bi-camera-fill"></i>
                     </button>
-
-                    <input id="avatarInput" name="owner_photo" type="file" accept="image/*" class="d-none">
+                    <input id="avatarInputOwner" name="owner_photo" type="file" accept="image/*" class="d-none">
                     @error('owner_photo') <div class="text-danger small mt-1">{{ $message }}</div> @enderror
                   </div>
                 </div>
@@ -95,7 +87,7 @@
                     </div>
                     <div class="col-12 col-md-6">
                       <label class="form-label mb-1">Email</label>
-                      <input id="owner_name" name="owner_email" type="text" class="form-control" value="{{ old('owner_email', $user->email) }}">
+                      <input id="owner_email" name="owner_email" type="text" class="form-control" value="{{ old('owner_email', $user->email) }}">
                       @error('owner_email') <div class="text-danger small mt-1">{{ $message }}</div> @enderror
                     </div>
                   </div>
@@ -103,8 +95,9 @@
               </div>
             </section>
           </form>
-            <!-- Preferensi Toko -->
-            <form method="POST" action="{{ route('seller.settings.store.update') }}" enctype="multipart/form-data">
+
+          <!-- Preferensi Toko -->
+            <form action={{ route ('settings.store.update') }} method="POST" enctype="multipart/form-data">
               @csrf
               @method('put')
               <section class="gg-card p-3 p-md-4 mb-3">
@@ -115,11 +108,12 @@
                 <div class="row g-3">
                   <div class="col-auto">
                     <div class="position-relative">
-                      <img id="avatarPreview" src="{{ $store->store_logo ? asset('storage/' . $store->store_logo) : 'https://i.pravatar.cc/96' }}" class="rounded-circle border" alt="avatar" style="width:80px;height:80px;object-fit:cover">
-                      <button class="btn btn-sm btn-light position-absolute bottom-0 end-0 rounded-circle border" id="btnAvatarPick" title="Change avatar">
-                        <i class="bi bi-camera-fill"></i>
-                      </button>
-                      <input id="avatarInput" name="store_logo" type="file" accept="image/*" class="d-none">
+                      <!-- Store avatar -->
+                        <img id="avatarPreviewStore" src="{{ $store->store_logo ? asset('storage/' . $store->store_logo) : asset('images/profile-large.png') }}" class="rounded-circle border" alt="avatar" style="width:80px;height:80px;object-fit:cover">
+                        <button class="btn btn-sm btn-light position-absolute bottom-0 end-0 rounded-circle border" id="btnAvatarPickStore" title="Change avatar" type="button">
+                          <i class="bi bi-camera-fill"></i>
+                        </button>
+                        <input id="avatarInputStore" name="store_logo" type="file" accept="image/*" class="d-none">
                       @error('store_logo') <div class="text-danger small mt-1">{{ $message }}</div> @enderror
                     </div>
                   </div>
@@ -128,15 +122,17 @@
                     <div class="row g-2">
                       <div class="col-12 col-md-6">
                         <label class="form-label mb-1">Store name</label>
-                        <input id="storeName" name="store_name" type="text" class="form-control" value="{{ old('store_name', $store->name) }}">    
+                        <input id="storeName" name="store_name" type="text" class="form-control" value={{ old('store_name', $store->store_name) }}>
+                        @error('store_name') <div class="text-danger small mt-1">{{ $message }}</div> @enderror   
                       </div>
                       <div class="col-12 col-md-6">
                         <label class="form-label mb-1">Contact</label>
-                        <input id="phone" type="text" name="store_phone" class="form-control" value=" {{ old('store_phone', $store->phone) }}">
+                        <input id="phone" type="text" name="store_phone" class="form-control" value="{{ old('store_phone', $store->store_phone) }}">
+                        @error('store_phone') <div class="text-danger small mt-1">{{ $message }}</div> @enderror
                       </div>
                         <div class="col-12">
                         <label class="form-label mb-1">Store address</label>
-                        <textarea id="address" rows="2" class="form-control" name="store_address">{{ old('store_address', $store->address)}}</textarea>
+                        <textarea id="address" rows="2" class="form-control" name="store_address">{{ old('store_address', $store->store_address) }}</textarea>
                         </div>
                       </div>
                     </div>
@@ -153,26 +149,22 @@
             <section class="gg-card p-3 p-md-4 mb-3">
               <h5 class="mb-3">Security</h5>
               <div class="mb-2">
-                <form method="POST" action= "{{ route('seller.settings.password.update') }}">
-                  @csrf
-                  @method('put') 
-                  <label class="form-label mb-1">Change Password</label>
-                    <div class="row g-2">
-                      <div class="col-12">
-                        <input id="pwCurrent" type="password" class="form-control" placeholder="Current password">
-                      </div>
-                      <div class="col-12 col-md-6">
-                        <input id="pwNew" type="password" class="form-control" placeholder="New password">
-                      </div>
-                      <div class="col-12 col-md-6">
-                        <input id="pwConfirm" type="password" class="form-control" placeholder="Confirm new password">
-                      </div>
-                    </div>
-                    <div class="form-text" id="pwHint">Min. 8 karakter, kombinasi huruf & angka.</div>
-                      <div class="mt-2">
-                        <button type="submit" class="btn btn-sm btn-primary" id="btnChangePw"><i class="bi bi-shield-lock me-1"></i>Update Password</button>
-                      </div>  
-                </form>
+                <label class="form-label mb-1">Change Password</label>
+                <div class="row g-2">
+                  <div class="col-12">
+                    <input id="pwCurrent" type="password" class="form-control" placeholder="Current password">
+                  </div>
+                  <div class="col-12 col-md-6">
+                    <input id="pwNew" type="password" class="form-control" placeholder="New password">
+                  </div>
+                  <div class="col-12 col-md-6">
+                    <input id="pwConfirm" type="password" class="form-control" placeholder="Confirm new password">
+                  </div>
+                </div>
+                <div class="form-text" id="pwHint">Min. 8 karakter, kombinasi huruf & angka.</div>
+                <div class="mt-2">
+                  <button class="btn btn-sm btn-primary" id="btnChangePw" type="button"><i class="bi bi-shield-lock me-1"></i>Update Password</button>
+                </div>
               </div>
             </section>
             </div>
@@ -246,7 +238,7 @@
 
   <!-- Bootstrap JS -->
   <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
-  <script src="{{ asset('js/settings')}}"></script>
+  <script src="{{ asset('js/settings.js')}}"></script>
 
 </body>
 </html>
