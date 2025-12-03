@@ -16,6 +16,9 @@
   <link rel="stylesheet" href="{{ asset('css/styles.css') }}">
 </head>
 <body>
+  @if ('session' )
+  
+  @endif
   <div class="container-fluid">
     <div class="row g-0">
 
@@ -53,11 +56,11 @@
 
         <!-- Content -->
         <div class="row g-3">
-
+        <form method="POST" action={{ route('settings.owner.update') }} enctype="multipart/form-data">
           <!-- ========= KIRI ========= -->
           <div class="col-12 col-xl-12">
-            <!-- Profil Toko -->
-          <form method="POST" action={{ route('settings.owner.update') }} enctype="multipart/form-data">
+            <!-- Profil owner -->
+          
             @csrf
             @method('put')
             <section class="gg-card p-3 p-md-4 mb-3">
@@ -70,7 +73,7 @@
               <div class="row g-3 align-items-center">
                 <div class="col-auto">
                   <div class="position-relative">
-                    <img id="avatarPreviewOwner" src="{{ $user->photoProfile ? asset('storage/' . $user->photoProfile) : asset ('images/profile-large.png') }}" class="rounded-circle border" alt="avatar" style="width:80px;height:80px;object-fit:cover">
+                    <img id="avatarPreviewOwner" src="{{ $cusT->avatar_path ? asset('storage/' . $cusT->avatar_path) : asset ('') }}" class="rounded-circle border" alt="avatar" style="width:80px;height:80px;object-fit:cover">
                     <button class="btn btn-sm btn-light position-absolute bottom-0 end-0 rounded-circle border" id="btnAvatarPickOwner" title="Change avatar" type="button" aria-label="Change avatar">
                       <i class="bi bi-camera-fill"></i>
                     </button>
@@ -146,24 +149,35 @@
 
           <div class="col-lg-8 col-md-7 col-12">
             <!-- Keamanan (tanpa 2FA) -->
+          <form method="POST" action="{{ route('settings.password.update') }}">
+            @csrf
+            @method('PUT')
             <section class="gg-card p-3 p-md-4 mb-3">
               <h5 class="mb-3">Security</h5>
               <div class="mb-2">
                 <label class="form-label mb-1">Change Password</label>
                 <div class="row g-2">
                   <div class="col-12">
-                    <input id="pwCurrent" type="password" class="form-control" placeholder="Current password">
+                    <input id="pwCurrent" type="password" class="form-control @error('current_password') is-invalid @enderror" placeholder="Current password" name="current_password">
+                    @error('current_password')
+                      <div class="invalid-feedback">{{ $message }}</div>
+                    @enderror
                   </div>
                   <div class="col-12 col-md-6">
-                    <input id="pwNew" type="password" class="form-control" placeholder="New password">
+                    <input id="pwNew" type="password" class="form-control  @error('password') is-invalid @enderror" placeholder="New password" name="password">
                   </div>
                   <div class="col-12 col-md-6">
-                    <input id="pwConfirm" type="password" class="form-control" placeholder="Confirm new password">
+                    <input id="pwConfirm" type="password" class="form-control" placeholder="Confirm new password"  name="password_confirmation">
                   </div>
+                  @error('password')
+                        <div class="col-12">
+                          <div class="invalid-feedback d-block">{{ $message }}</div>
+                        </div>
+                      @enderror
                 </div>
                 <div class="form-text" id="pwHint">Min. 8 karakter, kombinasi huruf & angka.</div>
                 <div class="mt-2">
-                  <button class="btn btn-sm btn-primary" id="btnChangePw" type="button"><i class="bi bi-shield-lock me-1"></i>Update Password</button>
+                  <button class="btn btn-sm btn-primary" id="btnChangePw" type="submit"><i class="bi bi-shield-lock me-1"></i>Update Password</button>
                 </div>
               </div>
             </section>
@@ -173,9 +187,10 @@
               <section class="gg-card p-3 p-md-4">
                 <h5 class="mb-3 text-danger">Danger Zone</h5>
                 <div class="d-flex flex-column gap-2">
-                  <button class="btn btn-outline-danger" data-bs-toggle="modal" data-bs-target="#modalClearData">
-                    <i class="bi bi-trash3 me-1"></i> Clear test data
-                  </button>
+                  
+                  <form action="">
+
+                  </form>
                   <button class="btn btn-danger" data-bs-toggle="modal" data-bs-target="#modalDeleteStore">
                     <i class="bi bi-exclamation-octagon me-1"></i> Delete store
                   </button>
@@ -190,40 +205,47 @@
   </div>
 
   <!-- Modals Danger -->
-  <div class="modal fade" id="modalClearData" tabindex="-1" aria-hidden="true">
-    <div class="modal-dialog">
-      <div class="modal-content">
-        <div class="modal-header"><h5 class="modal-title">Clear test data</h5>
-          <button class="btn-close" data-bs-dismiss="modal"></button>
-        </div>
-        <div class="modal-body">
-          Menghapus pesanan & produk dummy di lingkungan pengujian. Tindakan ini tidak bisa dibatalkan.
-        </div>
-        <div class="modal-footer">
-          <button class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
-          <button class="btn btn-danger" data-bs-dismiss="modal" id="btnClearOk">Clear</button>
-        </div>
-      </div>
-    </div>
-  </div>
+  <div class="modal fade" id="modalDeleteStore" tabindex="-1" aria-labelledby="modalDeleteStoreLabel" aria-hidden="true">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <form method="POST" action="{{ route('settings.store.destroy') }}">
+        @csrf
+        @method('DELETE')
 
-  <div class="modal fade" id="modalDeleteStore" tabindex="-1" aria-hidden="true">
-    <div class="modal-dialog">
-      <div class="modal-content">
-        <div class="modal-header"><h5 class="modal-title text-danger">Delete store</h5>
-          <button class="btn-close" data-bs-dismiss="modal"></button>
+        <div class="modal-header">
+          <h5 class="modal-title" id="modalDeleteStoreLabel">Delete Store</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
         </div>
+
         <div class="modal-body">
-          Ketik <b>DELETE</b> untuk konfirmasi penghapusan permanen toko ini beserta semua datanya.
-          <input id="confirmDelete" type="text" class="form-control mt-2" placeholder="DELETE">
+          <p class="mb-2">
+            Tindakan ini akan menghapus store beserta data terkait (produk, dsb). Ini tidak bisa dibatalkan.
+          </p>
+          <p class="mb-1">
+            Ketik <strong>DELETE</strong> untuk konfirmasi.
+          </p>
+          <input
+            type="text"
+            name="confirm_delete"
+            id="confirmDelete"
+            class="form-control @error('confirm_delete') is-invalid @enderror"
+          >
+          @error('confirm_delete')
+            <div class="invalid-feedback">{{ $message }}</div>
+          @enderror
         </div>
+
         <div class="modal-footer">
-          <button class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
-          <button class="btn btn-danger" id="btnDeleteStore" disabled>Delete</button>
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+          <button type="submit" class="btn btn-danger" id="btnDeleteStore" disabled>
+            <i class="bi bi-exclamation-octagon me-1"></i> Delete store
+          </button>
         </div>
-      </div>
+      </form>
     </div>
   </div>
+</div>
+
 
   @if(session('success'))
     <div class="position-fixed bottom-0 end-0 p-3" style="z-index:1080">

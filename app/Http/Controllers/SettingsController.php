@@ -6,6 +6,8 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\UpdateOwnerRequest;
 use App\Http\Requests\UpdateStoreRequest;
 use App\Http\Requests\UpdatePasswordRequest;
+use App\Models\CustomerProfile;
+use App\Models\SellerStore;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
@@ -20,6 +22,7 @@ class SettingsController extends Controller
     public function index()
     {
         $user = Auth::user();
+        $cusT = CustomerProfile::where('user_id', $user->id)->first();
         $store = $user->sellerStore;
 
         if (! $store) abort(404, 'Store tidak ditemukan.');
@@ -27,44 +30,60 @@ class SettingsController extends Controller
         return view('seller.store-setting', [
             'user' => $user,
             'store' => $store,
+            'cusT' => $cusT,
         ]);
     }
 
     public function updateOwner(UpdateOwnerRequest $request)
     {
-            $user = Auth::user();
-            $validated = $request->validated();
+        $user  = Auth::user();
+        $custT = CustomerProfile::where('user_id', $user->id)->first(); // idealnya pakai relasi
 
-            DB::beginTransaction();
-            try {
-                $emailChanged = (isset($validated['owner_email']) && $validated['owner_email'] !== $user->email);
-                $user->name = $validated['owner_name'] ?? $user->name;
-                $user->email = $validated['owner_email'] ?? $user->email;
+        $validated = $request->validated();
 
-                if ($request->hasFile('owner_photo')) {
-                    if ($user->avatar_path && Storage::disk('public')->exists($user->avatar_path)) {
-                        Storage::disk('public')->delete($user->avatar_path);
-                    }
+        DB::beginTransaction();
+        try {
+            $emailChanged = (
+                isset($validated['owner_email']) &&
+                $validated['owner_email'] !== $user->email
+            );
 
-                    $path = $request->file('avatar_path')->store('seller_photos', 'public');
-                    $user->avatar_path = $path;
+            $user->name  = $validated['owner_name']  ?? $user->name;
+            $user->email = $validated['owner_email'] ?? $user->email;
+
+            if ($request->hasFile('owner_photo')) {
+                if ($custT && $custT->avatar_path && Storage::disk('public')->exists($custT->avatar_path)) {
+                    Storage::disk('public')->delete($custT->avatar_path);
                 }
 
-                if ($emailChanged) {
-                    $user->email_verified_at = null;
-                    // optionally: Notification::send(...) or event(new Registered($user));
+                $path = $request->file('owner_photo')->store('seller_photos', 'public');
+
+                if (!$custT) {
+                    $custT = new CustomerProfile();
+                    $custT->user_id = $user->id;
                 }
 
-                $user->save();
-                DB::commit();
-
-                $msg = 'Informasi pemilik berhasil diperbarui.' . ($emailChanged ? ' Mohon cek email untuk verifikasi ulang.' : '');
-                return back()->with('success', $msg);
-            } catch (\Throwable $e) {
-                DB::rollBack();
-                \Log::error('UpdateOwner error: '.$e->getMessage(), ['trace' => $e->getTraceAsString()]);
-                return back()->withErrors(['error' => 'Gagal memperbarui data pemilik. Silakan coba lagi.']);
+                $custT->avatar_path = $path;
             }
+
+            if ($emailChanged) {
+                $user->email_verified_at = null;
+            }
+
+            $user->save();          // BUKAN update() kosong
+            if ($custT) {
+                $custT->save();     // INI yang tadi hilang
+            }
+
+            DB::commit();
+
+            $msg = 'Informasi pemilik berhasil diperbarui.' . ($emailChanged ? ' Mohon cek email untuk verifikasi ulang.' : '');
+            return back()->with('success', $msg);
+
+        } catch (\Throwable $e) {
+            DB::rollBack();
+            throw $e;
+        }
     }
 
     /**
@@ -123,13 +142,66 @@ class SettingsController extends Controller
     {
         $user = Auth::user();
 
-        if (! Hash::check($request->input('current_password'), $user->password)) {
-            return back()->withErrors(['current_password' => 'Password saat ini tidak cocok.']);
+        if (! Hash::check($request->current_password, $user->password)) {
+            return back()
+                ->withErrors(['current_password' => 'Password saat ini tidak cocok.'])
+                ->withInput();
         }
 
-        $user->password = Hash::make($request->input('password'));
+        $user->password = Hash::make($request->password);
         $user->save();
 
         return back()->with('success', 'Password berhasil diubah.');
+    }
+
+    public function destroyStore(Request $request)
+    {
+        $user = Auth::user();
+
+        // validasi konfirmasi
+        $request->validate([
+            'confirm_delete' => ['required', 'in:DELETE'],
+        ], [
+            'confirm_delete.in' => 'Anda harus mengetik "DELETE" untuk mengkonfirmasi penghapusan store.',
+        ]);
+
+        $store = SellerStore::where('user_id', $user->id)->first();
+
+        if (! $store) {
+            return back()->withErrors(['store' => 'Store tidak ditemukan.']);
+        }
+
+        DB::beginTransaction();
+        try {
+            // opsional: hapus avatar/logo store dari storage
+            if ($store->avatar_path && Storage::disk('public')->exists($store->avatar_path)) {
+                Storage::disk('public')->delete($store->avatar_path);
+                $store->avatar_path = null;
+            }
+
+            // NONAKTIFKAN store, JANGAN delete row
+            $store->status = 'inactive'; // atau 'closed' sesuai enum kamu
+            // kalau kamu punya flag lain:
+            // $store->is_active = false;
+
+            // opsional: nonaktifkan semua produk milik store ini
+            // kalau memang kamu punya kolom is_active di products
+            // $store->products()->update(['is_active' => false]);
+
+            $store->save();
+
+            DB::commit();
+
+            return redirect()
+                ->route('dashboard') // ganti kalau perlu
+                ->with('success', 'Store berhasil dinonaktifkan.');
+        } catch (\Throwable $e) {
+            DB::rollBack();
+            report($e);
+
+            return back()->withErrors([
+                'store' => 'Gagal menonaktifkan store. Silakan coba lagi.',
+            ]);
+        }
     }
 }

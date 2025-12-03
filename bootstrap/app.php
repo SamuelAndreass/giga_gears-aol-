@@ -17,6 +17,7 @@ return Application::configure(basePath: dirname(__DIR__))
             'ensure.seller' => App\Http\Middleware\EnsureIfSeller::class,
             'ensure.admin' => App\Http\Middleware\EnsureUserIsAdmin::class,
             'ensure.active' => \App\Http\Middleware\EnsureUserActive::class,
+            'store.active' => \App\Http\Middleware\EnsureStoreIsActive::class,
         ]);
 
  

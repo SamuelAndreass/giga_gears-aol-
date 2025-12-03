@@ -6,7 +6,10 @@ document.addEventListener('DOMContentLoaded', function () {
   const previewOwner = document.getElementById('avatarPreviewOwner');
 
   if (btnOwner && inputOwner && previewOwner) { 
-    btnOwner.addEventListener('click', (e) => {e.preventDefault; inputOwner.click();});
+    btnOwner.addEventListener('click', (e) => {
+      e.preventDefault();
+      inputOwner.click();
+    });
 
     inputOwner.addEventListener('change', function (e) {
       const file = e.target.files[0];
@@ -26,7 +29,11 @@ document.addEventListener('DOMContentLoaded', function () {
   const previewStore = document.getElementById('avatarPreviewStore');
 
   if (btnStore && inputStore && previewStore) {
-btnStore.addEventListener('click', (e) => {e.preventDefault; inputStore.click();});
+    btnStore.addEventListener('click', (e) => {
+      e.preventDefault();
+      inputStore.click();
+    });
+
     inputStore.addEventListener('change', function (e) {
       const file = e.target.files[0];
       if (!file) return;

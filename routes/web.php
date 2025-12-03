@@ -56,7 +56,7 @@ Route::middleware(['auth', 'ensure.active'])->group(function(){
 
 
 // seller
-Route::middleware(['auth','ensure.seller', 'ensure.active'])->prefix('seller')->group(function(){
+Route::middleware(['auth','ensure.seller', 'ensure.active', 'store.active'])->prefix('seller')->group(function(){
 
     Route::get('/orders/{id}/ship-data', [SellerController::class, 'shipData'])->name('seller.orders.shipData');
     Route::post('/orders/{id}/ship', [SellerController::class, 'ship'])->name('seller.orders.ship');
@@ -74,8 +74,10 @@ Route::middleware(['auth','ensure.seller', 'ensure.active'])->prefix('seller')->
     Route::get('settings', [SettingsController::class, 'index'])->name('settings.index');
     Route::put('settings/owner', [SettingsController::class, 'updateOwner'])->name('settings.owner.update');
     Route::put('settings/store', [SettingsController::class, 'updateStore'])->name('settings.store.update');
-    Route::post('settings/password', [SettingsController::class, 'updatePassword'])->name('settings.password.update');
+    Route::put('settings/password', [SettingsController::class, 'updatePassword'])->name('settings.password.update');
     Route::get('/seller/orders-over-time/data', [SellerController::class, 'data'])->name('seller.orders-over-time.data');
+    Route::delete('settings/store', [SettingsController::class, 'destroyStore'])->name('settings.store.destroy');
+
 });
 
 

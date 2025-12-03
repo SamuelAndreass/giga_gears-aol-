@@ -91,6 +91,9 @@ class SellerController extends Controller
     }
 
     public function store(Request $request){
+        /** @var \App\Models\User $user */
+        $user = Auth::user();
+        $sellerStore = $user->sellerStore;
         $request->validate([
             'store_name' => 'required|string|max:255|unique:seller_profiles,store_name',
             'store_phone' => 'required|string|max:20',
@@ -105,9 +108,6 @@ class SellerController extends Controller
             'close_time' => 'nullable|date_format:H:i',
         ]);
 
-        /** @var \App\Models\User $user */
-        $user = Auth::user();
-
         $data  = [
             'user_id' => $user->id,
             'store_name' => $request->input('store_name'),
@@ -118,6 +118,7 @@ class SellerController extends Controller
             'description' => $request->input('store_description'),
             'open_time' => $request->input('open_time'),
             'close_time' => $request->input('close_time'),
+            'status' => 'active',
         ];
         if($request->hasFile('logo')){
             $data['logo'] = $request->file('logo')->store('store_logos', 'public');
@@ -125,19 +126,27 @@ class SellerController extends Controller
         if($request->hasFile('banner')){
             $data['banner'] = $request->file('banner')->store('store_banners', 'public');
         }
-        if(!$user->is_seller) {
-            $user->update(['role' => 'seller', 'is_seller' => true]);
-            SellerStore::create($data);
-            return redirect()->route('seller.dashboard')->with('message', 'Selamat! Toko and berhasil dibuat.');
+
+        if (! $sellerStore) {
+                if (! $user->is_seller) {
+                    $user->update([
+                        'role'      => 'seller',
+                        'is_seller' => true,
+                    ]);
+                SellerStore::create($data);
+
+                return redirect()
+                ->route('seller.dashboard')
+                ->with('message', 'Selamat! Toko Anda berhasil dibuat.');
+            }
         }
 
-        $sellerstore = $user->sellerStore;
-        if($sellerstore){
-            $sellerstore->update($data);
-            return redirect()->route('seller.dashboard')->with('message', 'Berhasil memperbarui informasi toko.');
-        }
+            $sellerStore->update($data);
 
-        return back()->withErrors(['store' => 'Tidak dapat membuat atau memperbarui toko. Silakan coba lagi.']);
+        return redirect()
+            ->route('seller.dashboard')
+            ->with('message', 'Toko Anda berhasil diaktifkan / diperbarui.');
+
     }
 
     public function viewRecentOrder(Request $request)

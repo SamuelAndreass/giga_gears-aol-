@@ -18,8 +18,8 @@ class UpdateOwnerRequest extends FormRequest
 
         return [
             'owner_name' => 'required|string|max:255',
-            'email' => 'required|email|max:255|unique:users,email,' . $userId,
-            'avatar_path' => 'nullable|image|mimes:jpg,jpeg,png,webp|max:4096',
+            'owner_email' => 'required|email|max:255|unique:users,email,' . $userId,
+            'owner_photo' => 'nullable|image|mimes:jpg,jpeg,png,webp|max:4096',
         ];
     }
 }

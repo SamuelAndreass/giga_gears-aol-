@@ -17,10 +17,8 @@ return new class extends Migration
             $table->string('email')->unique();
             $table->timestamp('email_verified_at')->nullable();
             $table->string('password');
-            $table->string('profile_image')->nullable();
             $table->boolean('is_seller')->default(false);
             $table->string('role')->default('customer');
-            $table->string('photoProfile')->nullable();
             $table->string('google_id')->nullable()->unique();
             $table->string('avatar')->nullable();
             $table->enum('status', ['active', 'inactive', 'banned','suspended'])->default('active');
