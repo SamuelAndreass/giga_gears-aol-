@@ -17,10 +17,9 @@
   <div class="sheet">
     <a href="#" class="brand-img" aria-label="GigaGears">
   <img
-    src="../assets/gigagears-logo.png"
+    src="{{asset ('images/logo GigaGears.png')}}"
     alt="GigaGears"
-    class="brand-logo"
-    srcset="../assets/gigagears-logo.png 1x, ../assets/gigagears-logo@2x.png 2x">
+    class="brand-logo mb-2">
 </a>
 
     <!-- Title -->
@@ -54,7 +53,7 @@
               @error('logo') <div class="invalid-feedback">{{ $message }}</div>@enderror
               <div class="form-text">PNG/JPG up to 1MB. Square ratio recommended.</div>
             </div>
-            <div class="col-auto pt-4">
+            <div class="col-auto">
               <label for="logoInput" class="btn btn-outline-primary">Upload</label>
             </div>
           </div>
@@ -66,7 +65,7 @@
               @error('banner') <div class="invalid-feedback d-block">{{ $message }}</div>@enderror
               <div class="form-text">PNG/JPG up to 2MB. 16:9 ratio recommended.</div>
             </div>
-            <div class="col-auto pt-4">
+            <div class="col-auto">
               <label for="bannerInput" class="btn btn-outline-primary">Upload</label>
             </div>
           </div>

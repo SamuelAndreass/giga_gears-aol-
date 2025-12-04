@@ -115,3 +115,4 @@ class CartController extends Controller
         return redirect()->route('orders.index')->with('message', 'Checkout berhasil!');
     }
 }
+

@@ -50,19 +50,7 @@
 {{-- 2. KONTEN UTAMA (@section('content')) --}}
 {{-- ================================================= --}}
 @section('content')
-
-    {{-- FIX: Definisi variabel dipindahkan di sini agar diproses sebelum konten --}}
-    @php
-        $profile = [
-            'username' => 'JohnDoe99',
-            'email' => 'johndoe@gmail.com',
-            'phone' => '08299248123989',
-            'address' => 'Jl. Melati No. 25, Kel. Sukamaju, Kec. Tebet, Jakarta Selatan, DKI Jakarta, 12810',
-            'card' => 'Visa **** 1234',
-            'paypal' => 'PayPal (johndoe@gmail.com)',
-        ];
-    @endphp
-
+    @if(session('error'))
     {{-- Title & Log Out --}}
     <div class="d-flex justify-content-between align-items-center" style="width: 100%; margin-top: 50px; margin-bottom: 30px;">
         <div>
@@ -71,53 +59,58 @@
         </div>
         
         {{-- Log Out Button --}}
-        <a href="/sign-in" class="d-flex justify-content-center align-items-center" style="width: 179px; height: 54px; background: #E33629; border: 1px solid #E33629; border-radius: 5px; color: #FFFFFF; font-family: 'Chakra Petch', sans-serif; font-weight: 600; font-size: 24px; text-decoration: none;">
-            <svg style="margin-right: 10px;" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24"><path fill="currentColor" d="M16 9v-4l8 7-8 7v-4h-8v-6h8zm-2 10v3h-12v-22h12v3h-2v-2h-8v18h8v-2h2z"/></svg>
-            Log Out
-        </a>
+        <form action="{{ route('logout') }}" method="POST" style="margin: 0;">
+            @csrf
+            <button type="submit" class="d-flex justify-content-center align-items-center"
+                style="width: 179px; height: 54px; background: #E33629; border: 1px solid #E33629; border-radius: 5px; color: #FFFFFF; font-family: 'Chakra Petch', sans-serif; font-weight: 600; font-size: 24px; text-decoration: none; cursor: pointer;">
+                
+                <svg style="margin-right: 10px;" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24">
+                    <path fill="currentColor" d="M16 9v-4l8 7-8 7v-4h-8v-6h8zm-2 10v3h-12v-22h12v3h-2v-2h-8v18h8v-2h2z"/>
+                </svg>
+                Log Out
+            </button>
+        </form>
     </div>
 
     {{-- Frame 102: Profile Summary --}}
     <div class="d-flex align-items-center p-4" style="width: 100%; border: 1px solid #D7D7D7; border-radius: 10px; gap: 42px; margin-bottom: 40px;">
         
-        {{-- Ellipse 4: Profile Image --}}
-        <img src="{{ asset('images/profile-large.png') }}" alt="Profile" style="width: 140px; height: 140px; border-radius: 50%; background: #D9D9D9; flex-shrink: 0;">
+        {{-- Profile Image --}}
+        <img src="{{ $pfp }}" alt="Profile" style="width: 140px; height: 140px; border-radius: 50%; background: #D9D9D9; flex-shrink: 0;">
         
-        {{-- Frame 97: Details --}}
+        {{-- Details --}}
         <div class="d-flex" style="width: 100%; justify-content: space-between; align-items: center; gap: 62px;">
             
             {{-- Username --}}
             <div class="d-flex flex-column">
                 <div class="text-muted" style="font-family: 'Chakra Petch', sans-serif; font-weight: 500; font-size: 18px;">Username</div>
-                <div class="fw-bold" style="font-family: 'Chakra Petch', sans-serif; font-weight: 600; font-size: 24px;">{{ $profile['username'] }}</div>
+                <div class="fw-bold" style="font-family: 'Chakra Petch', sans-serif; font-weight: 600; font-size: 24px;">{{ $user->name ?? '—' }}</div>
             </div>
             
             {{-- Email --}}
             <div class="d-flex flex-column">
                 <div class="text-muted" style="font-family: 'Chakra Petch', sans-serif; font-weight: 500; font-size: 18px;">Email</div>
-                <div class="fw-bold" style="font-family: 'Chakra Petch', sans-serif; font-weight: 600; font-size: 24px;">{{ $profile['email'] }}</div>
+                <div class="fw-bold" style="font-family: 'Chakra Petch', sans-serif; font-weight: 600; font-size: 24px;">{{ $user->email ?? '—' }}</div>
             </div>
             
             {{-- Phone Number --}}
             <div class="d-flex flex-column">
                 <div class="text-muted" style="font-family: 'Chakra Petch', sans-serif; font-weight: 500; font-size: 18px;">Phone Number</div>
-                <div class="fw-bold" style="font-family: 'Chakra Petch', sans-serif; font-weight: 600; font-size: 24px;">{{ $profile['phone'] }}</div>
+                <div class="fw-bold" style="font-family: 'Chakra Petch', sans-serif; font-weight: 600; font-size: 24px;">{{ $user->phone ?? '—' }}</div>
             </div>
 
             {{-- Edit Profile Button --}}
-            <a href="/profile/edit" class="d-flex justify-content-center align-items-center" style="width: 179px; height: 54px; border: 1px solid #E33629; border-radius: 5px; color: #E33629; background: none; font-family: 'Chakra Petch', sans-serif; font-weight: 600; font-size: 24px; flex-shrink: 0; text-decoration: none;">
+            <a href="{{ route('profile.edit') }}" class="d-flex justify-content-center align-items-center" style="width: 179px; height: 54px; border: 1px solid #E33629; border-radius: 5px; color: #E33629; background: none; font-family: 'Chakra Petch', sans-serif; font-weight: 600; font-size: 24px; flex-shrink: 0; text-decoration: none;">
                 Edit Profile
             </a>
         </div>
     </div>
 
-
     {{-- Default Shipping Address --}}
     <div class="d-flex flex-column" style="gap: 11px;">
         <div class="section-title">Default Shipping Address</div>
-        {{-- Address Box --}}
-        <a href="/profile/edit" class="profile-list-item" style="color: #1D1D1D; font-family: 'Montserrat', sans-serif; font-weight: 500; font-size: 22px;">
-            <span>{{ $profile['address'] }}</span>
+        <a href="{{ route('profile.edit') }}" class="profile-list-item" style="color: #1D1D1D; font-family: 'Montserrat', sans-serif; font-weight: 500; font-size: 22px;">
+            <span>{{ $user->address ?? 'No default address set' }}</span>
             <span style="color: #067CC2;">Change</span>
         </a>
     </div>
@@ -125,14 +118,12 @@
     {{-- Payment Method --}}
     <div class="d-flex flex-column" style="gap: 11px; margin-top: 30px;">
         <div class="section-title">Payment Method</div>
-        {{-- Visa Card --}}
-        <a href="/profile/edit" class="profile-list-item" style="color: #1D1D1D; font-family: 'Montserrat', sans-serif; font-weight: 500; font-size: 22px;">
-            <span>{{ $profile['card'] }}</span>
+        <a href="{{ route('profile.edit') }}" class="profile-list-item" style="color: #1D1D1D; font-family: 'Montserrat', sans-serif; font-weight: 500; font-size: 22px;">
+            <span>{{ $user->card ?? 'No card saved' }}</span>
             <span style="color: #067CC2;">Change</span>
         </a>
-        {{-- PayPal --}}
-        <a href="/profile/edit" class="profile-list-item" style="color: #1D1D1D; font-family: 'Montserrat', sans-serif; font-weight: 500; font-size: 22px;">
-            <span>{{ $profile['paypal'] }}</span>
+        <a href="{{ route('profile.edit') }}" class="profile-list-item" style="color: #1D1D1D; font-family: 'Montserrat', sans-serif; font-weight: 500; font-size: 22px;">
+            <span>{{ $user->paypal ?? 'No PayPal linked' }}</span>
             <span style="color: #067CC2;">Change</span>
         </a>
     </div>
@@ -140,30 +131,74 @@
     {{-- Security Settings --}}
     <div class="d-flex flex-column" style="gap: 11px; margin-top: 30px;">
         <div class="section-title">Security Settings</div>
-        {{-- Password --}}
-        <a href="/profile/edit" class="profile-list-item" style="color: #1D1D1D; font-family: 'Montserrat', sans-serif; font-weight: 500; font-size: 22px;">
-            <span>Password (*******)</span>
-            <span style="color: #067CC2;">Change</span>
-        </a>
-        {{-- Two-Factor Authentication --}}
-        <a href="/profile/edit" class="profile-list-item" style="color: #1D1D1D; font-family: 'Montserrat', sans-serif; font-weight: 500; font-size: 22px;">
-            <span>Two-Factor Authentication</span>
-            <div class="d-flex align-items-center" style="gap: 10px;">
-                <span style="width: 23px; height: 23px; background: #067CC2; border-radius: 50%;"></span>
-                <span style="font-family: 'Montserrat', sans-serif; font-weight: 500; font-size: 22px; color: #067CC2;">Enabled</span>
+
+        {{-- PASSWORD CHANGE TOGGLE --}}
+        <div id="password-section" class="profile-list-item flex-column align-items-start">
+            <div class="d-flex justify-content-between w-100 align-items-center">
+                <span style="font-family:'Montserrat',sans-serif;font-weight:500;font-size:22px;color:#1D1D1D;">
+                    Password
+                </span>
+                <button id="togglePasswordForm" type="button" class="btn btn-link p-0" style="color:#067CC2;font-size:22px;text-decoration:none;">
+                    Change
+                </button>
             </div>
-        </a>
-    </div>
-    
-    {{-- Others --}}
+
+            {{-- Password Form (hidden by default) --}} 
+            <form id="passwordForm" method="POST" action="{{ route('profile.settings.update') }}" style="{{ $errors->updatePassword->any() ? '' : 'display:block;' }}; width:100%; margin-top:20px;">
+                @csrf
+                <input type="hidden" name="action" value="update_password">
+
+                <input type="password" name="current_password" placeholder="Current password">
+                @error('current_password', 'updatePassword')
+                    <div class="text-danger">{{ $message }}</div>
+                @enderror
+
+                <input type="password" name="password" placeholder="New password">
+                @error('password', 'updatePassword')
+                    <div class="text-danger">{{ $message }}</div>
+                @enderror
+
+                <input type="password" name="password_confirmation" placeholder="Confirm password">
+
+                <button type="submit">Update Password</button>
+
+                @if (session('status') === 'password-updated')
+                    <div class="alert alert-success mt-2">Password updated successfully.</div>
+                @endif
+            </form>
+        </div>
+
+
+{{-- Script: Toggle Form + Show/Hide Password --}}
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+    const hasError = {{ $errors->updatePassword->any() ? 'true' : 'false' }};
+    if (hasError) {
+        document.getElementById('passwordForm').style.display = 'block';
+    }
+});
+
+document.getElementById('togglePasswordForm').addEventListener('click', () => {
+    const form = document.getElementById('passwordForm');
+    form.style.display = form.style.display === 'none' ? 'block' : 'none';
+});
+
+function togglePassword(id, el) {
+    const input = document.getElementById(id);
+    const isHidden = input.type === 'password';
+    input.type = isHidden ? 'text' : 'password';
+    el.textContent = isHidden ? '🙈' : '👁';
+}
+</script>
+
+
+    {{-- Others (tidak berubah kecuali route) --}}
     <div class="d-flex flex-column" style="gap: 11px; margin-top: 30px;">
         <div class="section-title">Others</div>
-        {{-- Things Preference --}}
-        <a href="/profile/edit" class="profile-list-item" style="color: #1D1D1D; font-family: 'Montserrat', sans-serif; font-weight: 500; font-size: 22px;">
+        <a href="{{ route('profile.edit') }}" class="profile-list-item" style="color: #1D1D1D; font-family: 'Montserrat', sans-serif; font-weight: 500; font-size: 22px;">
             <span>Things Preference</span>
             <span style="color: #067CC2;">&gt;</span>
         </a>
-        {{-- Order History --}}
         <a href="/my-order" class="profile-list-item" style="color: #1D1D1D; font-family: 'Montserrat', sans-serif; font-weight: 500; font-size: 22px;">
             <span>Order History</span>
             <span style="color: #067CC2;">&gt;</span>
@@ -208,7 +243,7 @@
         
         <div class="page-container d-flex justify-content-between" style="gap: 197px;">
             <div class="d-flex flex-column" style="width: 343px; gap: 27px;">
-                <img src="{{ asset('images/gigagears-logo-footer.png') }}" alt="GIGAGEARS Logo" width="263" height="32">
+                <img src="{{ asset('images/logo GigaGears.png') }}" alt="GIGAGEARS Logo" width="263" height="32">
                 <p style="font-family: 'Chakra Petch', sans-serif; font-style: italic; font-weight: 500; font-size: 22px; line-height: 29px; color: #000000;">Empowering your digital lifestyle with the best tech and software.</p>
             </div>
 

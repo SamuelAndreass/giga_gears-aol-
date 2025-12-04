@@ -37,6 +37,7 @@ class User extends Authenticatable
             if ($user->role === 'customer') {
                 CustomerProfile::create([
                     'user_id' => $user->id,
+                    'phone' => $user->phone,
                 ]);
             }
         });

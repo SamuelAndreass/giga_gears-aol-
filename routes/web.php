@@ -7,7 +7,8 @@ use App\Http\Controllers\SellerController;
 use App\Http\Controllers\CartController;
 use App\Http\Controllers\SettingsController;
 use App\Http\Controllers\Auth\SocialAuthController;
-
+USE App\Http\Controllers\HomeController;
+use App\Http\Controllers\CustController;
 
 Route::middleware('guest')->group(function () {
     Route::get('/login', [\App\Http\Controllers\Auth\AuthenticatedSessionController::class, 'create'])->name('login');
@@ -31,27 +32,25 @@ Route::get('/', function () {
     };
 });
 
-
-
-//Route::get('/products', [ProductController::class, 'index'])->name('products.index');
-//Route::get('/products/featured', [ProductController::class, 'featured'])->name('products.featured');
-//Route::get('/products/search', [ProductController::class, 'search'])->name('products.search');
-//Route::get('/products/category/{categoryId}', [ProductController::class, 'byCategory'])->name('products.category');
-//Route::get('/products/{id}', [ProductController::class, 'show'])->name('products.show');
-//Route::post('/products/{id}/review', [ProductController::class, 'addReview'])->name('products.review');
-// Route::get('/api/products/search', [ProductController::class, 'apiSearch'])->name('api.products.search');
-
 // customer (basic user)
 Route::middleware(['auth', 'ensure.active'])->group(function(){
-    Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
-    Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');
-    Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
+    Route::get('dashboard', [HomeController::class, 'index'])->name('dashboard');
+    Route::get('/profile/setting', [ProfileController::class, 'edit'])->name('profile.edit');
+    Route::post('/profile/settings/update', [ProfileController::class, 'update'])->name('profile.settings.update');
+    Route::post('/profile', [ProfileController::class, 'update'])->name('profile.update');
+    Route::view('/become-seller', 'seller.seller-setup-store')->name('become.seller.page');
+    Route::get('/become-seller/store', [SellerController::class, 'store'])->name('become.seller');
+    Route::view('/checkout', 'customer.checkout')->name('checkout');
+    Route::get('/my-order', [CustController::class, 'myOrders'])->name('my.order');
+    Route::get('/products/{id}/detail', [CustController::class, 'showProd'])->name('product.detail');
     Route::get('/cart', [CartController::class, 'index'])->name('cart.index');
-    Route::post('/cart/add/{productId}', [CartController::class, 'add'])->name('cart.add');
-    Route::post('/cart/update/{itemId}', [CartController::class, 'update'])->name('cart.update');
-    Route::delete('/cart/remove/{itemId}', [CartController::class, 'remove'])->name('cart.remove');
-    Route::post('/cart/checkout', [CartController::class, 'checkout'])->name('cart.checkout');
-    Route::get('/become-seller', [SellerController::class, 'store'])->name('become.seller');
+    Route::post('/cart/add/{product}', [CartController::class, 'add'])->name('cart.add');
+    Route::post('/cart/update/{item}', [CartController::class, 'update'])->name('cart.update');
+    Route::delete('/cart/remove/{item}', [CartController::class, 'remove'])->name('cart.remove');
+    Route::view('/seller/dashboard', 'seller.dashboard'); 
+    Route::view('/profile', 'customer.profile');
+    Route::view('/product/{slug}', 'customer.product-detail');
+    Route::view('/products', 'customer.product-detail');
 });
 
 

@@ -40,7 +40,7 @@ class AuthenticatedSessionController extends Controller
             case 'seller':
                 return redirect()->route('seller.index');
             default:
-                return redirect()->route('customer.dashboard');
+                return redirect()->route('dashboard');
         }
     }
 
