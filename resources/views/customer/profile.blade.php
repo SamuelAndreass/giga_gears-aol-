@@ -49,8 +49,12 @@
 {{-- ================================================= --}}
 {{-- 2. KONTEN UTAMA (@section('content')) --}}
 {{-- ================================================= --}}
-@section('content')
+(@section('content'))    
     @if(session('error'))
+        <div class="alert alert-danger">
+            {{ session('error') }}
+        </div>
+    @endif
     {{-- Title & Log Out --}}
     <div class="d-flex justify-content-between align-items-center" style="width: 100%; margin-top: 50px; margin-bottom: 30px;">
         <div>
@@ -76,7 +80,7 @@
     <div class="d-flex align-items-center p-4" style="width: 100%; border: 1px solid #D7D7D7; border-radius: 10px; gap: 42px; margin-bottom: 40px;">
         
         {{-- Profile Image --}}
-        <img src="{{ $pfp }}" alt="Profile" style="width: 140px; height: 140px; border-radius: 50%; background: #D9D9D9; flex-shrink: 0;">
+        <img src="{{ $pfp ?? asset('images/pp.webp') }}" alt="Profile" style="width: 140px; height: 140px; border-radius: 50%; background: #D9D9D9; flex-shrink: 0;">
         
         {{-- Details --}}
         <div class="d-flex" style="width: 100%; justify-content: space-between; align-items: center; gap: 62px;">
@@ -144,28 +148,26 @@
             </div>
 
             {{-- Password Form (hidden by default) --}} 
-            <form id="passwordForm" method="POST" action="{{ route('profile.settings.update') }}" style="{{ $errors->updatePassword->any() ? '' : 'display:block;' }}; width:100%; margin-top:20px;">
-                @csrf
-                <input type="hidden" name="action" value="update_password">
+                <form id="passwordForm" method="POST" action="{{ route('profile.settings.password.update') }}" style="{{ $errors->updatePassword->any() ? '' : 'display:block;' }}; width:100%; margin-top:20px;">
+                    @csrf
+                    
+                    <input type="password" name="current_password" placeholder="Current password">
+                        @error('current_password', 'updatePassword')
+                            <div class="text-danger">{{ $message }}</div>
+                        @enderror
 
-                <input type="password" name="current_password" placeholder="Current password">
-                @error('current_password', 'updatePassword')
-                    <div class="text-danger">{{ $message }}</div>
-                @enderror
+                        <input type="password" name="password" placeholder="New password">
+                        @error('password', 'updatePassword')
+                            <div class="text-danger">{{ $message }}</div>
+                        @enderror
 
-                <input type="password" name="password" placeholder="New password">
-                @error('password', 'updatePassword')
-                    <div class="text-danger">{{ $message }}</div>
-                @enderror
+                        <input type="password" name="password_confirmation" placeholder="Confirm password">
 
-                <input type="password" name="password_confirmation" placeholder="Confirm password">
-
-                <button type="submit">Update Password</button>
-
-                @if (session('status') === 'password-updated')
-                    <div class="alert alert-success mt-2">Password updated successfully.</div>
-                @endif
-            </form>
+                        <button type="submit">Update Password</button>
+                        @if (session('status') === 'password-updated')
+                            <div class="alert alert-success mt-2">Password updated successfully.</div>
+                        @endif
+                </form>
         </div>
 
 

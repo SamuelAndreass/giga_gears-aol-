@@ -9,6 +9,8 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Redirect;
 use Illuminate\View\View;
 use App\Models\CustomerProfile;
+use Illuminate\Support\Facades\Validator;
+use Illuminate\Validation\Rules\Password;
 
 class ProfileController extends Controller
 {
@@ -19,7 +21,7 @@ class ProfileController extends Controller
     {
         $user = Auth::user();
         $profile = CustomerProfile::where('user_id', $user->id)->first();
-        $pfp = $user->avatar_path ?? 'images/profile-default.png';
+        $pfp = $user->avatar_path;
         return view('customer.profile', [
             'user' => $user,
             'pfp' => $pfp,
@@ -31,73 +33,72 @@ class ProfileController extends Controller
     /**
      * Update the user's profile information.
      */
-    public function update(ProfileUpdateRequest $request): RedirectResponse
+     public function updateProfile(Request $request): RedirectResponse
     {
-        dd($request->all());
-        $user = auth()->user();
+        $user = $request->user();
 
-        // Tentukan form mana yang dikirim
-        $action = $request->input('action');
+        $validator = Validator::make($request->all(), [
+            'name' => ['required','string','max:255'],
+            'email' => ['required','email','max:255','unique:users,email,' . $user->id],
+            'phone' => ['nullable','string','max:20'],
+            'address' => ['nullable','string','max:255'],
+        ]);
 
-        /**
-         * ========================
-         *  UPDATE PROFILE SECTION
-         * ========================
-         */
-        if ($action === 'update_profile') {
-            $validated = $request->validateWithBag('updateProfile', [
-                'name' => ['required', 'string', 'max:255'],
-                'email' => ['required', 'email', 'max:255', 'unique:users,email,' . $user->id],
-                'phone' => ['nullable', 'string', 'max:20'],
-                'address' => ['nullable', 'string', 'max:255'],
-            ]);
-
-            $user->update($validated);
-
-            return back()->with('status', 'profile-updated');
+        if ($validator->fails()) {
+            return back()->withErrors($validator, 'updateProfile')->withInput();
         }
 
-        /**
-         * ========================
-         *  UPDATE PASSWORD SECTION
-         * ========================
-         */
-        if ($action === 'update_password') {
-            
-            $validated = $request->validateWithBag('updatePassword', [
-                'current_password' => ['required'],
-                'password' => ['required', 'confirmed', Password::defaults()],
-            ]);
+        $user->update($validator->validated());
 
-            // Verifikasi password lama
-            if (!Hash::check($request->current_password, $user->password)) {
-                return back()->withErrors(['current_password' => 'Your current password is incorrect.'], 'updatePassword');
-            }
+        return back()->with('status', 'profile-updated');
+    }
 
-            // Update password baru
-            $user->update([
-                'password' => Hash::make($request->password),
-            ]);
+    public function updatePassword(Request $request): RedirectResponse
+    {
+        $user = $request->user();
 
-            return back()->with('status', 'password-updated');
+        $validator = Validator::make($request->all(), [
+            'current_password' => ['required'],
+            'password' => ['required', 'confirmed', Password::defaults()],
+        ]);
+
+        if ($validator->fails()) {
+            return back()->withErrors($validator, 'updatePassword')->withInput();
         }
 
-        /**
-         * ========================
-         *  UPDATE ADDRESS SECTION
-         * ========================
-         */
-        if ($action === 'update_address') {
-            $validated = $request->validateWithBag('updateAddress', [
-                'address' => ['required', 'string', 'max:255'],
-            ]);
-
-            $user->update($validated);
-
-            return back()->with('status', 'address-updated');
+        // cek current password
+        if (! Hash::check($request->input('current_password'), $user->password)) {
+            return back()
+                ->withErrors(['current_password' => 'Current password is incorrect.'], 'updatePassword')
+                ->withInput();
         }
 
-        return back()->withErrors(['general' => 'Invalid form submission.']);
+        // update password
+        $user->update([
+            'password' => Hash::make($request->input('password')),
+        ]);
+
+        // optional: regenerate session to avoid fixation / logout other sessions
+        // $request->session()->regenerate();
+
+        return back()->with('status', 'password-updated');
+    }
+
+    public function updateAddress(Request $request): RedirectResponse
+    {
+        $user = $request->user();
+
+        $validator = Validator::make($request->all(), [
+            'address' => ['required','string','max:255'],
+        ]);
+
+        if ($validator->fails()) {
+            return back()->withErrors($validator, 'updateAddress')->withInput();
+        }
+
+        $user->update(['address' => $validator->validated()['address']]);
+
+        return back()->with('status', 'address-updated');
     }
     
 

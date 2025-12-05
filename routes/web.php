@@ -36,8 +36,9 @@ Route::get('/', function () {
 Route::middleware(['auth', 'ensure.active'])->group(function(){
     Route::get('dashboard', [HomeController::class, 'index'])->name('dashboard');
     Route::get('/profile/setting', [ProfileController::class, 'edit'])->name('profile.edit');
-    Route::post('/profile/settings/update', [ProfileController::class, 'update'])->name('profile.settings.update');
-    Route::post('/profile', [ProfileController::class, 'update'])->name('profile.update');
+    Route::post('/profile/settings/profile', [ProfileController::class, 'updateProfile'])->name('profile.settings.profile.update');
+    Route::post('/profile/settings/password', [ProfileController::class, 'updatePassword'])->name('profile.settings.password.update');
+    Route::post('/profile/settings/address', [ProfileController::class, 'updateAddress'])->name('profile.settings.address.update');
     Route::view('/become-seller', 'seller.seller-setup-store')->name('become.seller.page');
     Route::get('/become-seller/store', [SellerController::class, 'store'])->name('become.seller');
     Route::view('/checkout', 'customer.checkout')->name('checkout');
