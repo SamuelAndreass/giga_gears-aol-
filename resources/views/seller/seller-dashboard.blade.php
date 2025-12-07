@@ -69,7 +69,7 @@
           <div class="col-12 col-md-3 col-xl-3">
             <div class="kpi">
               <span class="rounded-3 bg-primary-subtle text-primary d-inline-flex align-items-center justify-content-center" style="width:36px;height:36px"><i class="bi bi-bag"></i></span>
-              <div><div class="small text-muted-gg">Total Orders</div><div class="fs-4 fw-black">{{ $total_order }}</div></div>
+              <div><div class="small text-muted-gg">Products Sold</div><div class="fs-4 fw-black">{{ $total_order }}</div></div>
             </div>
           </div>
           <div class="col-12 col-md-3 col-xl-3">

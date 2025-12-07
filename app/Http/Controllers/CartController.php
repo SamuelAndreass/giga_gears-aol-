@@ -1,118 +1,162 @@
 <?php
+
 namespace App\Http\Controllers;
+
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
 use App\Models\Cart;
 use App\Models\CartItem;
 use App\Models\Product;
-use App\Models\Order;
-use App\Models\OrderItem;
-use Illuminate\Http\Request;
-use Illuminate\Support\Facades\DB;
 
 class CartController extends Controller
 {
-   //
-    public function index(){
+    // show cart page
+    public function index(Request $request)
+    {
         $cart = Cart::with('items.product')
-        ->where('user_id', auth()->id())
-        ->where('status', 'active')
-        ->first();
+            ->where('user_id', $request->user()->id)
+            ->where('status', 'active')
+            ->first();
+
+        // support json (AJAX) or blade view
+        if ($request->wantsJson()) {
+            return response()->json(['cart' => $cart]);
+        }
 
         return view('customer.cart', compact('cart'));
     }
 
-    public function add(Request $request, $productId)
+    // add product to cart
+    public function add(Request $request)
     {
-        $product = Product::findOrFail($productId);
+        $request->validate([
+            'product_id' => 'required|exists:products,id',
+            'qty' => 'nullable|integer|min:1',
+        ]);
 
+        $user = $request->user();
+        $qty = (int) ($request->input('qty', 1));
+        $product = Product::findOrFail($request->product_id);
+
+        // create or get active cart
         $cart = Cart::firstOrCreate(
-            ['user_id' => auth()->id(), 'status' => 'active'],
-            ['total_price' => 0]
+            ['user_id' => $user->id, 'status' => 'active'],
+            ['total' => 0]
         );
 
-        $item = $cart->items()->where('product_id', $productId)->first();
+        $item = $cart->items()->where('product_id', $product->id)->first();
+
         if ($item) {
-            $item->increment('qty', $request->input('qty', 1));
+            $item->update([
+                'qty' => $item->qty + $qty,
+                'price' => $product->original_price,
+                'subtotal' => ($item->qty + $qty) * $product->original_price,
+            ]);
         } else {
             $cart->items()->create([
-                'product_id' => $productId,
-                'qty' => $request->input('qty', 1),
-                'price' => $product->price,
-                'subtotal' => $product->price * $request->input('qty', 1),
+                'product_id' => $product->id,
+                'qty' => $qty,
+                'sku' => $product->sku ?? null,
+                'price' => $product->original_price,
+                'subtotal' => $product->original_price * $qty,
             ]);
         }
 
+        // recalc total
+        $cart->refresh();
         $cart->update([
-            'total_price' => $cart->items->sum(fn($i) => $i->qty * $i->price)
+            'total' => $cart->items->sum(fn($i) => ($i->qty ?? 0) * ($i->price ?? 0))
         ]);
 
-        return redirect()->back()->with('message', 'Produk berhasil ditambahkan ke keranjang.');
+        if ($request->wantsJson()) {
+            return response()->json(['message' => 'Added to cart', 'cart' => $cart->load('items.product')], 200);
+        }
+
+        return redirect()->back()->with('message', 'Product added to cart.');
     }
 
+    // update item qty
     public function update(Request $request, $itemId)
     {
-        $item = CartItem::findOrFail($itemId);
-
         $request->validate([
             'qty' => 'required|integer|min:1',
         ]);
 
-        $item->update(['qty' => $request->qty]);
-        $cart = $item->cart;
-        $cart->update([
-            'total_price' => $cart->items->sum(fn($i) => $i->qty * $i->price)
+        $item = CartItem::findOrFail($itemId);
+        // ensure owner
+        if ($item->cart->user_id !== $request->user()->id) {
+            abort(403);
+        }
+
+        $item->update([
+            'qty' => $request->qty,
+            'subtotal' => $request->qty * $item->price,
         ]);
 
-        return back()->with('message', 'Jumlah item berhasil diperbarui.');
+        $cart = $item->cart;
+        $cart->update([
+            'total' => $cart->items->sum(fn($i) => ($i->qty ?? 0) * ($i->price ?? 0))
+        ]);
+
+        if ($request->wantsJson()) {
+            return response()->json(['message' => 'Cart updated', 'cart' => $cart->load('items.product')]);
+        }
+
+        return back()->with('message', 'Cart updated.');
     }
 
-
-    public function remove($itemId)
+    // remove item
+    public function remove(Request $request, $itemId)
     {
         $item = CartItem::findOrFail($itemId);
-        $cart = $item->cart;
+        if ($item->cart->user_id !== $request->user()->id) abort(403);
 
+        $cart = $item->cart;
         $item->delete();
 
         $cart->update([
-            'total_price' => $cart->items->sum(fn($i) => $i->qty * $i->price)
+            'total' => $cart->items->sum(fn($i) => ($i->qty ?? 0) * ($i->price ?? 0))
         ]);
 
-        return back()->with('message', 'Item berhasil dihapus dari keranjang.');
+        if ($request->wantsJson()) {
+            return response()->json(['message' => 'Item removed', 'cart' => $cart->load('items.product')]);
+        }
+
+        return back()->with('message', 'Item removed.');
     }
 
-    public function checkout()
+    public function buyNowRedirect(Request $request)
     {
-        DB::transaction(function () {
-            $cart = Cart::with('items.product')
-                ->where('user_id', auth()->id())
-                ->where('status', 'active')
-                ->firstOrFail();
+        $request->validate([
+            'product_id' => 'required|integer|exists:products,id',
+            'qty' => 'nullable|integer|min:1',
+        ]);
 
-            $order = Order::create([
-                'user_id' => auth()->id(),
-                'order_date' => now(),
-                'status' => 'pending',
-                'total_amount' => $cart->items->sum(fn($i) => $i->qty * $i->price),
-            ]);
+        $user = $request->user();
+        $qty = (int) ($request->qty ?? 1);
 
-            // Pindahkan semua item ke order_items
-            foreach ($cart->items as $item) {
-                OrderItem::create([
-                    'order_id' => $order->id,
-                    'product_id' => $item->product_id,
-                    'qty' => $item->qty,
-                    'price' => $item->price,
-                ]);
+        // Ambil product
+        $product = Product::findOrFail($request->product_id);
 
-                // Kurangi stok produk
-                $item->product->decrement('stock', $item->qty);
-            }
+        // Ambil atau buat cart aktif untuk user
+        $cart = Cart::firstOrCreate([
+            'user_id' => $user->id,
+            'status' => 'active',
+        ]);
 
-            $cart->update(['status' => 'checked_out']);
-            $cart->items()->delete();
-        });
+        // Pilihan: kosongkan cart lama (agar checkout hanya untuk produk ini)
+        // Jika kamu mau agar buy-now hanya menambah tanpa hapus, skip this step.
+        $cart->items()->delete();
 
-        return redirect()->route('orders.index')->with('message', 'Checkout berhasil!');
+        // Tambah item baru (simpan price & subtotal snapshot)
+        $cart->items()->create([
+            'product_id' => $product->id,
+            'qty' => $qty,
+            'price' => $product->original_price, // atau original_price sesuai schema
+            'subtotal' => $product->original_price * $qty,
+        ]);
+
+        // Redirect ke halaman checkout yang sudah ada (showCheckoutPage)
+        return redirect()->route('checkout.index');
     }
 }
-

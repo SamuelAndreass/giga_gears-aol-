@@ -13,13 +13,25 @@ return new class extends Migration
     {
         Schema::create('orders', function (Blueprint $table) {
             $table->id();
-            $table->timestamps();
-            $table->string('order_code')->unique();
+            $table->string('order_code')->unique(); 
             $table->foreignId('user_id')->constrained()->onDelete('cascade');
-            $table->date('order_date');
-            $table->decimal('total_amount', 12, 2);
-            $table->enum('status', ['paid','pending', 'shipped', 'processing', 'delivered', 'completed', 'cancelled'] )->default('pending');
-            
+            $table->dateTime('ordered_at')->nullable();
+            $table->string('shipping_address')->nullable();
+            $table->string('billing_address')->nullable();
+            $table->string('payment_method')->nullable();
+            $table->enum('payment_status', ['pending', 'paid', 'failed', 'refunded'])->default('pending');
+            $table->string('payment_reference')->nullable();
+            $table->string('payment_provider')->nullable();
+            $table->enum('status', ['pending', 'processing', 'shipped', 'delivered', 'completed', 'cancelled'])->default('pending');
+            $table->decimal('subtotal', 12, 2)->default(0);
+            $table->decimal('shipping_fee', 12, 2)->default(0);
+            $table->decimal('tax', 12, 2)->default(0);
+            $table->decimal('discount', 12, 2)->default(0);
+            $table->decimal('total_amount', 12, 2)->default(0);
+            $table->string('idempotency_key')->nullable()->unique();
+            $table->softDeletes();
+            $table->timestamps();
+
         });
     }
 

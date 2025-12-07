@@ -147,7 +147,7 @@
                           @if($status === 'active' || $status === 'completed') text-success
                           @elseif($status === 'refunded') text-danger
                           @else text-warning
-                          @endif">{{ $status }}</span></td>
+                          @endif">{{ ucfirst($status) }}</span></td>
                     </tr>
                    @empty
                     <tr>

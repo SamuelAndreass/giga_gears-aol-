@@ -1,199 +1,168 @@
-<!DOCTYPE html>
-<html lang="id">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Shopping Cart | GigaGears</title>
-    
-    {{-- Bootstrap --}}
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-    
-    {{-- Google Fonts --}}
-    <link href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@400;500;600;700&family=Montserrat:wght@400;500;700&display=swap" rel="stylesheet">
-    
+@extends('layouts.main')
+@section('title', 'My Cart')
+
+@section('content')
+@section('header')
     <style>
-        body {
-            font-family: 'Montserrat', sans-serif;
+        .header-wrapper {
+            width: 100%;
+            height: 90px;
+            padding-top: 20px; 
             background: #FFFFFF;
-            margin: 0;
-            padding: 0;
+            border-bottom: 1px solid #eee;
         }
-        
-        .page-container {
+        .main-navbar {
             width: 1280px;
-            max-width: 90%;
-            margin: 0 auto;
+            max-width: 90%; 
+            margin: 0 auto; 
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
         }
-        
-        h1, h2, h3, h4, h5, h6 {
-            font-family: 'Chakra Petch', sans-serif;
-        }
-        
-        .cart-item-image {
-            width: 100px;
-            height: 100px;
-            object-fit: contain;
-            border: 1px solid #eee;
-            border-radius: 5px;
-            padding: 5px;
-        }
-        
-        .btn-custom {
-            background: #067CC2;
-            color: white;
-            border: none;
-            padding: 10px 20px;
-            border-radius: 5px;
+        .back-icon {
+            position: relative;
+            width: 43px;
+            height: 43px;
+            left: 0;
+            top: 70px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            background: #717171;
+            border-radius: 9999px;
             text-decoration: none;
-            display: inline-block;
-        }
-        
-        .btn-custom:hover {
-            background: #0568a3;
-            color: white;
+            z-index: 20;
+            transform: translateX(-50%); 
         }
     </style>
-</head>
-<body>
-    {{-- HEADER (Sama seperti home.blade.php) --}}
-    <div style="width:100%; height:90px; padding-top:20px; background:#FFFFFF; border-bottom:1px solid #eee;">
-        <div class="page-container" style="display:flex; justify-content:space-between; align-items:center;">
-            <img src="/images/logo GigaGears.png" alt="GIGAGEARS Logo" width="197" height="24">
+    
+    <div class="header-wrapper">
+        
+        {{-- Frame 19: NAVBAR --}}
+        <div class="page-container main-navbar">
+            <img src="{{ asset('images/logo GigaGears.png') }}" alt="GIGAGEARS Logo" width="197" height="24">
             
-            <div style="display:flex; gap:71px;">
-                <div style="display:flex; gap:20px;">
-                    <a href="/" style="color:#000000; font-size:25px; text-decoration:none;">Home</a>
-                    <a href="/products" style="color:#000000; font-size:25px; text-decoration:none;">Products</a>
-                    <a href="/#about-us-section" style="color:#000000; font-size:25px; text-decoration:none;">About Us</a>
-                    <a href="/my-order" style="color:#000000; font-size:25px; text-decoration:none;">My Order</a>
+            {{-- Frame 16: Links --}}
+            <div class="d-flex" style="gap: 71px; font-size:25px">
+                <div class="d-flex gap-5">
+                    <a href="{{ route('dashboard') }}" style="color: #000000; text-decoration: none;">Home</a>
+                    <a href="{{ route('products.index') }}" style="color: #000000; text-decoration: none;">Products</a>
+                    <a href="/#about-us-section" style="color: #000000; text-decoration: none;">About Us</a>
+                    <a href="{{ route('orders.index') }}" style="color: #000000; text-decoration: none;">My Order</a>
+                    <a href="{{ route('cart.index') }}" 
+                        class="position-relative text-decoration-none 
+                        {{ request()->routeIs('cart.index') ? 'text-primary fw-bold' : 'text-dark' }}">
+                        <i class="bi bi-cart3 fs-4"></i>
+                        @if($cartCount > 0)
+                            <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger fs-6">
+                                {{ $cartCount }}
+                            </span>
+                        @endif
+                    </a>
                 </div>
             </div>
 
-            <a href="/profile" style="border:1px solid #000000; border-radius:5px; padding:10px; width:135px; height:52px; text-decoration:none; color:#000; display:flex; align-items:center; justify-content:center;">
-                <div style="display:flex; align-items:center; gap:9px;">
+            {{-- Frame 18: Profil Button --}}
+            <a href="{{ route('profile.edit') }}" class="d-flex align-items-center justify-content-center profile-btn" style="border: 1px solid #000000; border-radius: 5px; padding: 10px; width: 135px; height: 52px; text-decoration: none; color: #000;">
+                <div class="d-flex align-items-center" style="gap: 9px;">
                     <span>Profil</span>
-                    <img src="/images/logo foto profile.png" alt="Profile" style="width:32px; height:32px; border-radius:50%;">
+                    <img src="{{ asset(Auth::user()->customerProfile->avatar_path ?? 'images/logo foto profile.png') }}" alt="Profile" style="width: 32px; height: 32px; border-radius: 50%;">
                 </div>
             </a>
         </div>
     </div>
+@endsection
+<div class="container my-5">
+    <h2 class="text-center fw-bold mb-5" style="font-family:'Chakra Petch',sans-serif;font-size:42px;">
+        🛒 My Shopping Cart
+    </h2>
 
-    {{-- CONTENT --}}
-    <div class="page-container" style="padding:40px 0;">
-        <h1 style="font-family:'Chakra Petch', sans-serif; font-weight:700; font-size:46px; margin-bottom:20px;">🛒 Shopping Cart</h1>
-        
-        {{-- Success Message --}}
-        @if(session('success'))
-        <div class="alert alert-success alert-dismissible fade show" role="alert">
-            {{ session('success') }}
-            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-        </div>
-        @endif
-        
-        {{-- Error Message --}}
-        @if(session('error'))
-        <div class="alert alert-danger alert-dismissible fade show" role="alert">
-            {{ session('error') }}
-            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-        </div>
-        @endif
-        
-        {{-- Empty Cart --}}
-        @if(empty($cartItems))
-        <div class="text-center py-5">
-            <h3 class="text-muted mb-4">Your cart is empty</h3>
-            <p class="text-muted mb-4">Add some products to start shopping</p>
-            <a href="/" class="btn-custom">Browse Products</a>
-        </div>
-        @else
-        {{-- Cart Items --}}
-        <div class="row">
-            <div class="col-md-8">
-                <div class="card">
+    @if ($cart && $cart->items->count() > 0)
+        <div class="row g-4">
+            {{-- CART ITEMS --}}
+            <div class="col-lg-8">
+                <div class="card shadow-sm border-0">
                     <div class="card-body">
-                        <table class="table">
-                            <thead>
-                                <tr>
-                                    <th>Product</th>
-                                    <th class="text-center">Price</th>
-                                    <th class="text-center">Quantity</th>
-                                    <th class="text-center">Subtotal</th>
-                                    <th class="text-center">Action</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                @foreach($cartItems as $item)
-                                <tr>
-                                    <td>
-                                        <div class="d-flex align-items-center">
-                                            <img src="/images/{{ $item['image'] }}" class="cart-item-image me-3">
-                                            <div>
-                                                <h6 class="mb-0">{{ $item['name'] }}</h6>
-                                                <small class="text-muted">Item ID: {{ $item['id'] }}</small>
-                                            </div>
-                                        </div>
-                                    </td>
-                                    <td class="text-center">${{ number_format($item['price'], 2) }}</td>
-                                    <td class="text-center">
-                                        <form action="/cart/update/{{ $item['id'] }}" method="POST" class="d-inline">
-                                            @csrf
-                                            <input type="number" name="quantity" value="{{ $item['quantity'] }}" min="1" class="form-control" style="width:80px; display:inline;">
-                                            <button type="submit" class="btn btn-sm btn-outline-primary">Update</button>
-                                        </form>
-                                    </td>
-                                    <td class="text-center fw-bold">${{ number_format($item['subtotal'], 2) }}</td>
-                                    <td class="text-center">
-                                        <form action="/cart/remove/{{ $item['id'] }}" method="POST">
-                                            @csrf
-                                            <button type="submit" class="btn btn-danger btn-sm">Remove</button>
-                                        </form>
-                                    </td>
-                                </tr>
-                                @endforeach
-                            </tbody>
-                        </table>
-                        
-                        <div class="d-flex justify-content-between mt-4">
-                            <a href="/" class="btn btn-outline-secondary">← Continue Shopping</a>
-                            <a href="/checkout" class="btn btn-success">Proceed to Checkout →</a>
-                        </div>
+                        @foreach ($cart->items as $item)
+                            <div class="row align-items-center border-bottom py-3">
+                                {{-- Product Image --}}
+                                <div class="col-3 col-md-2">
+                                    <img src="{{ asset('storage/' . ($item->product->image ?? 'no-image.png')) }}" 
+                                         class="img-fluid rounded border" alt="{{ $item->product->name }}">
+                                </div>
+
+                                {{-- Product Info --}}
+                                <div class="col-md-4">
+                                    <h5 class="mb-1 fw-bold">{{ $item->product->name }}</h5>
+                                    <p class="text-primary mb-0">Rp{{ number_format($item->price, 0, ',', '.') }}</p>
+                                </div>
+
+                                {{-- Quantity Update --}}
+                                <div class="col-md-3">
+                                    <form action="{{ route('cart.update', $item->id) }}" method="POST" class="d-flex align-items-center gap-2">
+                                        @csrf
+                                        @method('PUT')
+                                        <input type="number" name="qty" value="{{ $item->qty }}" min="1" class="form-control text-center" style="max-width: 80px;">
+                                        <button type="submit" class="btn btn-primary btn-sm">Update</button>
+                                    </form>
+                                </div>
+
+                                {{-- Subtotal --}}
+                                <div class="col-md-2 text-end fw-bold text-success">
+                                    Rp{{ number_format($item->subtotal, 0, ',', '.') }}
+                                </div>
+
+                                {{-- Remove --}}
+                                <div class="col-md-1 text-end">
+                                    <form action="{{ route('cart.remove', $item->id) }}" method="POST">
+                                        @csrf
+                                        @method('DELETE')
+                                        <button type="submit" class="btn btn-link text-danger p-0" title="Remove">
+                                            <i class="bi bi-trash-fill fs-5"></i>
+                                        </button>
+                                    </form>
+                                </div>
+                            </div>
+                        @endforeach
                     </div>
                 </div>
             </div>
-            
-            {{-- Order Summary --}}
-            <div class="col-md-4">
-                <div class="card">
-                    <div class="card-header bg-primary text-white">
-                        <h5 class="mb-0">Order Summary</h5>
-                    </div>
+
+            {{-- CART SUMMARY --}}
+            <div class="col-lg-4">
+                <div class="card shadow-sm border-0">
                     <div class="card-body">
-                        <div class="d-flex justify-content-between mb-2">
-                            <span>Items:</span>
-                            <span>{{ count($cartItems) }}</span>
-                        </div>
-                        <div class="d-flex justify-content-between mb-3">
-                            <span class="h5">Total:</span>
-                            <span class="h4 text-primary">${{ number_format($total, 2) }}</span>
-                        </div>
-                        
-                        <div class="d-grid">
-                            <a href="/checkout" class="btn btn-dark btn-lg">Checkout Now</a>
-                        </div>
-                        
-                        <div class="mt-3">
-                            <small class="text-muted">
-                                <i>Free shipping on orders over $500</i>
-                            </small>
+                        <h4 class="text-center fw-bold mb-4" style="font-family:'Chakra Petch',sans-serif;">Order Summary</h4>
+
+                        <ul class="list-group list-group-flush">
+                            <li class="list-group-item d-flex justify-content-between align-items-center">
+                                <span>Subtotal</span>
+                                <span class="fw-semibold">Rp{{ number_format($cart->items->sum('subtotal'), 0, ',', '.') }}</span>
+                            </li>
+                            <li class="list-group-item d-flex justify-content-between align-items-center border-top pt-3">
+                                <strong>Total</strong>
+                                <strong class="text-primary">
+                                    Rp{{ number_format($cart->items->sum('subtotal'),0, ',', '.') }}
+                                </strong>
+                            </li>
+                        </ul>
+
+                        <div class="d-grid mt-4">
+                            <a href="{{ route('checkout.index') }}" class="btn btn-primary fw-bold py-2">
+                                Proceed to Checkout
+                            </a>
                         </div>
                     </div>
                 </div>
             </div>
         </div>
-        @endif
-    </div>
-
-    {{-- Bootstrap JS --}}
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
-</body>
-</html>
+    @else
+        <div class="text-center py-5 text-muted fs-5">
+            Your cart is empty 😔  
+            <div class="mt-3">
+                <a href="{{ route('products.index') }}" class="btn btn-outline-primary">Go to Products</a>
+            </div>
+        </div>
+    @endif
+</div>
+@endsection

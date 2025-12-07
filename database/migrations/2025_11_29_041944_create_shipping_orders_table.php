@@ -19,6 +19,7 @@ return new class extends Migration
             $table->date('shipping_date')->nullable();
             $table->date('estimated_arrival_date')->nullable();
             $table->datetime('actual_arrival')->nullable();
+            $table->string('type')->nullable();
             $table->timestamps();
         });
 

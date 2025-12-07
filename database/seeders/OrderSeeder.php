@@ -26,9 +26,8 @@ class OrderSeeder extends Seeder
                     'user_id' => $cust->id,
                     'order_code' => 'ORD-'.strtoupper(\Illuminate\Support\Str::random(8)),
                     'total_amount' => 0,
-                    'status' => Arr::random(['pending','paid','processing','completed']),
-                    'created_at' => now()->subDays(rand(0,60)),
-                    'order_date' => now()->subDays(rand(0,60)),
+                    'status' => Arr::random(['pending','processing','completed']),
+                    'ordered_at' => now()->subDays(rand(0,60)),
                 ]);
 
                 // choose some products (simulate multi-seller)

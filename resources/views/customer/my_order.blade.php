@@ -1,99 +1,47 @@
 @extends('layouts.main')
 @section('title', 'My Orders')
 
-@php
-    // Data Dummy Riwayat Pesanan
-    $orders = [
-        [
-            'id' => '#ORD-3045', 
-            'date' => '25/09/2025', 
-            'product' => 'Logitech G Pro X Headset', 
-            'total' => 104, 
-            'status' => 'Completed',
-            'img_file' => 'product_logitech.png'
-        ],
-        [
-            'id' => '#ORD-3046', 
-            'date' => '22/09/2025', 
-            'product' => 'MSI Gaming Laptop i7 RTX 4060', 
-            'total' => 1309, 
-            'status' => 'Shipped',
-            'img_file' => 'product_msi.png'
-        ],
-        [
-            'id' => '#ORD-3047', 
-            'date' => '20/09/2025', 
-            'product' => 'Adobe Creative Cloud License', 
-            'total' => 29, 
-            'status' => 'Processing',
-            'img_file' => 'icon-software.png' 
-        ],
-        [
-            'id' => '#ORD-3048', 
-            'date' => '15/09/2025', 
-            'product' => 'Samsung Galaxy Tab S9', 
-            'total' => 709, 
-            'status' => 'Cancelled',
-            'img_file' => 'product_samsung.png'
-        ],
-    ];
-    
-    // Data Summary (dihitung)
-    $total_orders = count($orders);
-    $completed = 2; // Disesuaikan untuk demo visual
-    $in_progress = 1;
-    $cancelled = 1;
-@endphp
-
 {{-- ================================================= --}}
-{{-- 1. HEADER SECTION (@section('header')) --}}
+{{-- 1. HEADER --}}
 {{-- ================================================= --}}
 @section('header')
     <style>
-        /* Style Header dan Card Summary (Visual Upgrade) */
         .header-wrapper {
             width: 100%; height: 90px; padding-top: 20px; background: #FFFFFF; border-bottom: 1px solid #eee;
         }
         .main-navbar {
             width: 1280px; max-width: 90%; margin: 0 auto; display: flex; justify-content: space-between; align-items: center;
         }
-        .summary-card-inner {
-            background: #F4F8FA; /* Latar Belakang abu-abu terang */
-            border-radius: 10px;
-            padding: 20px;
-            transition: all 0.3s ease;
-            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.05);
-            min-height: 120px;
-        }
-        .summary-card-inner:hover {
-            transform: translateY(-5px);
-            box-shadow: 0 8px 15px rgba(0, 0, 0, 0.15);
-        }
-        .status-completed { color: #28a745; }
-        .status-progress { color: #007bff; }
-        .status-cancelled { color: #dc3545; }
-        .table thead th {
-            border-bottom: 2px solid #067CC2 !important; /* Garis bawah biru */
-        }
+        .nav-link-active { color: #067CC2 !important; font-weight: 600; }
     </style>
-    
+
     <div class="header-wrapper">
         <div class="page-container main-navbar">
             <img src="{{ asset('images/logo GigaGears.png') }}" alt="GIGAGEARS Logo" width="197" height="24">
-            
             <div class="d-flex" style="gap: 71px;">
                 <div class="d-flex gap-5">
-                    <a href="/" style="color: #000000; font-size:25px; text-decoration: none;">Home</a>
-                    <a href="/products" style="color: #000000; font-size:25px; text-decoration: none;">Products</a>
-                    <a href="/#about-us-section" style="color: #000000; font-size:25px; text-decoration: none;">About Us</a>
-                    <a href="/my-order" style="color: #067CC2; font-size:25px; text-decoration: none;">My Order</a>
+                    <a href="{{ route('dashboard') }}" style="color: #000; font-size:25px; text-decoration:none;">Home</a>
+                    <a href="{{ route('products.index') }}" style="color: #000; font-size:25px; text-decoration:none;">Products</a>
+                    <a href="/#about-us-section" style="color: #000; font-size:25px; text-decoration:none;">About Us</a>
+                    <a href="{{ route('orders.index') }}" style="color: #067CC2; font-size:25px; text-decoration:none;">My Order</a>
+                    <a href="{{ route('cart.index') }}" 
+                        class="position-relative text-decoration-none 
+                        {{ request()->routeIs('cart.index') ? 'text-primary fw-bold' : 'text-dark' }}">
+                        <i class="bi bi-cart3 fs-4"></i>
+                        @if($cartCount > 0)
+                            <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger fs-6">
+                                {{ $cartCount }}
+                            </span>
+                        @endif
+                    </a>
                 </div>
             </div>
 
-            <a href="/profile" class="d-flex align-items-center justify-content-center" style="border: 1px solid #000000; border-radius: 5px; padding: 10px; width: 135px; height: 52px; text-decoration: none; color: #000;">
-                <div class="d-flex align-items-center gap-2" style="gap: 9px;">
-                    <span>Profil</span>
-                    <img src="{{ asset('images/logo foto profile.png') }}" alt="Profile" style="width: 32px; height: 32px; border-radius: 50%;">
+            <a href="{{ route('profile.edit') }}" class="d-flex align-items-center justify-content-center" 
+               style="border: 1px solid #000; border-radius: 5px; padding: 10px; width: 135px; height: 52px; text-decoration: none; color: #000;">
+                <div class="d-flex align-items-center gap-2">
+                    <span style="color: #067CC2;">Profile</span>
+                    <img src="{{ asset(Auth::user()->customerProfile->avatar_path ?? 'images/logo foto profile.png') }}" alt="Profile" style="width: 32px; height: 32px; border-radius: 50%;">
                 </div>
             </a>
         </div>
@@ -102,161 +50,171 @@
 
 
 {{-- ================================================= --}}
-{{-- 2. KONTEN UTAMA (@section('content')) --}}
+{{-- 2. BODY CONTENT --}}
 {{-- ================================================= --}}
 @section('content')
+    <style>
+        /* --- Improved Table UX/UI --- */
+        .order-container {
+            background: #fff;
+            border-radius: 12px;
+            padding: 30px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.05);
+        }
 
-    <h1 style="font-family: 'Chakra Petch', sans-serif; font-weight: 700; font-size: 55px; line-height: 72px; color: #000000;">My Order History</h1>
-    <p style="font-family: 'Montserrat', sans-serif; font-weight: 500; font-size: 20px; line-height: 27px; color: #717171; margin-bottom: 30px;">Track your past and current orders with GigaGears.</p>
+        .table {
+            border-collapse: separate;
+            border-spacing: 0 10px;
+        }
+        .table thead th {
+            border: none;
+            background: #F8FAFC;
+            color: #000;
+            font-family: 'Chakra Petch', sans-serif;
+            font-weight: 600;
+            font-size: 18px;
+        }
+        .table tbody tr {
+            background: #F9FAFB;
+            border-radius: 8px;
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+        }
+        .table tbody tr:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 6px 14px rgba(0,0,0,0.08);
+        }
 
-    {{-- 1. SUMMARY CARDS --}}
-    <div class="row mb-5 justify-content-between" style="gap: 20px;">
-        
-        {{-- Card 1: Total Orders --}}
-        <div class="col-md-3">
-            <div class="summary-card-inner" style="background: #EAF3FF;">
-                <h5 class="fw-normal mb-1 status-progress" style="font-family: 'Montserrat', sans-serif;">TOTAL ORDERS</h5>
-                <h2 class="fw-bolder status-progress" style="font-size: 40px; margin-top: 5px;">{{ $total_orders }}</h2>
+        .badge { border-radius: 8px; font-size: 15px; }
+        .search-input, .filter-select {
+            border: 1px solid #D5D5D5;
+            border-radius: 8px;
+            padding: 10px 15px;
+            font-size: 16px;
+            transition: all 0.2s;
+        }
+        .search-input:focus, .filter-select:focus {
+            border-color: #067CC2;
+            box-shadow: 0 0 0 3px rgba(6, 124, 194, 0.2);
+            outline: none;
+        }
+        .page-link { border-radius: 50px !important; }
+        .page-item.active .page-link { background-color: #067CC2; border-color: #067CC2; }
+    </style>
+
+    <div class="container mt-5 mb-5">
+
+        {{-- FILTER & SEARCH --}}
+        <div class="d-flex justify-content-between align-items-center flex-wrap mb-4" style="gap: 15px;">
+            <h3 class="fw-bold" style="font-family: 'Chakra Petch', sans-serif; font-size: 30px;">Order History Details</h3>
+
+            <div class="d-flex flex-wrap gap-2">
+                <form method="GET" action="{{ route('orders.index') }}" class="d-flex gap-2">
+                    <input type="text" name="search" value="{{ request('search') }}" class="search-input shadow-sm" placeholder="🔍 Search Order ID or Product">
+                    <select name="status" class="filter-select shadow-sm" onchange="this.form.submit()">
+                        <option value="">Filter Status (All)</option>
+                        <option value="Completed" {{ request('status') == 'Completed' ? 'selected' : '' }}>Completed</option>
+                        <option value="Shipped" {{ request('status') == 'Shipped' ? 'selected' : '' }}>Shipped</option>
+                        <option value="Processing" {{ request('status') == 'Processing' ? 'selected' : '' }}>Processing</option>
+                        <option value="Cancelled" {{ request('status') == 'Cancelled' ? 'selected' : '' }}>Cancelled</option>
+                    </select>
+                </form>
             </div>
         </div>
 
-        {{-- Card 2: Completed --}}
-        <div class="col-md-3">
-            <div class="summary-card-inner" style="background: #E6FFEC;">
-                <h5 class="fw-normal mb-1 status-completed" style="font-family: 'Montserrat', sans-serif;">COMPLETED</h5>
-                <h2 class="fw-bolder status-completed" style="font-size: 40px; margin-top: 5px;">{{ $completed }}</h2>
+        {{-- ORDER TABLE --}}
+        <div class="order-container shadow-sm">
+            <div class="table-responsive">
+                <table class="table align-middle text-center">
+                    <thead>
+                        <tr>
+                            <th>Order ID</th>
+                            <th>Date</th>
+                            <th>Product</th>
+                            <th>Total ($)</th>
+                            <th>Status</th>
+                            <th>Action</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @forelse ($orders as $order)
+                            <tr>
+                                <td class="fw-bold text-primary">#{{ $order->id }}</td>
+                                <td class="text-secondary">{{ $order->created_at->format('d/m/Y') }}</td>
+                                <td class="text-start">
+                                     @php
+                                        // pastikan $order->products berisi koleksi (array dari relasi)
+                                        $firstProduct = $order->products[0]->name ?? 'Unnamed Product';
+                                        $otherCount = count($order->products) - 1;
+                                    @endphp
+                                    <div class="d-flex align-items-center gap-3">
+                                        <img src="{{ asset('images/' . ($order->products[0]->image ?? 'no-image.png')) }}"
+                                            alt="{{ $firstProduct }}" 
+                                            style="width:55px; height:55px; border-radius:5px; border:1px solid #eee; object-fit:contain;">
+                                        <div>
+                                        <div class="fw-bold text-dark">{{ $firstProduct }}</div>
+                                            @if ($otherCount > 0)
+                                                <small class="text-muted">and {{ $otherCount }} more product{{ $otherCount > 1 ? 's' : '' }}</small>
+                                            @endif
+                                        </div>
+                                    </div>
+                                </td>
+                                <td class="fw-bold text-success">${{ number_format($order->total_price, 2) }}</td>
+                                <td>
+                                    @switch($order->status)
+                                        @case('completed')
+                                            <span class="badge bg-success py-2 px-3">Completed</span>
+                                            @break
+                                        @case('delivered')
+                                        @case('shipped')
+                                            <span class="badge bg-info py-2 px-3">Shipped</span>
+                                            @break
+                                        @case('processing')
+                                            <span class="badge bg-warning text-dark py-2 px-3">Processing</span>
+                                            @break
+                                        @case('pending')
+                                            <span class="badge bg-secondary py-2 px-3">Pending</span>
+                                            @break
+                                        @default
+                                            <span class="badge bg-danger py-2 px-3">Cancelled</span>
+                                    @endswitch
+                                </td>
+                                <td>
+                                    <div class="d-flex flex-wrap justify-content-center gap-2">
+                                        <a href="{{ route('orders.show', $order->id) }}" class="btn btn-sm fw-bold text-white" style="background:#067CC2; border-radius:5px;">Detail</a>
+                                        @if (in_array($order->status, ['shipped', 'processing', 'pending']))
+                                            <form method="POST" action="{{ route('orders.cancel', $order->id) }}">
+                                                @csrf
+                                                <button type="submit" class="btn btn-sm btn-outline-danger">Batal</button>
+                                            </form>
+                                        @endif
+                                        @if ($order->status == 'Completed')
+                                            <a href="#" class="btn btn-sm btn-outline-dark">Invoice</a>
+                                        @endif
+                                    </div>
+                                </td>
+                            </tr>
+                        @empty
+                            <tr>
+                                <td colspan="6" class="text-center text-muted py-4">No orders found.</td>
+                            </tr>
+                        @endforelse
+                    </tbody>
+                </table>
+            </div>
+
+            {{-- Pagination --}}
+            <div class="d-flex justify-content-center mt-4">
+                {{ $orders->links() }}
             </div>
         </div>
-        
-        {{-- Card 3: In Progress --}}
-        <div class="col-md-3">
-            <div class="summary-card-inner" style="background: #FFF7E6;">
-                <h5 class="fw-normal mb-1 text-warning" style="font-family: 'Montserrat', sans-serif;">IN PROGRESS</h5>
-                <h2 class="fw-bolder text-warning" style="font-size: 40px; margin-top: 5px;">{{ $in_progress }}</h2>
-            </div>
-        </div>
-        
-        {{-- Card 4: Cancelled --}}
-        <div class="col-md-3">
-            <div class="summary-card-inner" style="background: #FFEBEB;">
-                <h5 class="fw-normal mb-1 text-danger" style="font-family: 'Montserrat', sans-serif;">CANCELLED</h5>
-                <h2 class="fw-bolder text-danger" style="font-size: 40px; margin-top: 5px;">{{ $cancelled }}</h2>
-            </div>
-        </div>
+
     </div>
-
-    {{-- GRAFIK SIMULASI (FITUR BARU) --}}
-    <div class="card p-4 shadow-sm mb-5" style="border-radius: 10px;">
-        <h3 class="fw-bold" style="font-family: 'Chakra Petch', sans-serif; font-size: 25px; border-bottom: 1px solid #eee; padding-bottom: 15px;">Order Status Distribution</h3>
-        <div class="row pt-3">
-            <div class="col-md-6">
-                <div style="height: 200px; background: #f8f8f8; border-radius: 5px; display: flex; justify-content: center; align-items: center; color: #717171;">
-                    [Placeholder: Grafik Pie Status Pesanan]
-                </div>
-            </div>
-            <div class="col-md-6">
-                <ul class="list-group list-group-flush">
-                    <li class="list-group-item d-flex justify-content-between">Completed <span class="fw-bold text-success">{{ $completed }}</span></li>
-                    <li class="list-group-item d-flex justify-content-between">Shipped / Processing <span class="fw-bold text-info">{{ $in_progress }}</span></li>
-                    <li class="list-group-item d-flex justify-content-between">Cancelled <span class="fw-bold text-danger">{{ $cancelled }}</span></li>
-                    <li class="list-group-item d-flex justify-content-between fw-bold">Total Items Bought <span class="fw-bolder text-primary">12 Items</span></li>
-                </ul>
-            </div>
-        </div>
-    </div>
-    
-    {{-- 2. FILTER DAN SEARCH --}}
-    <div class="d-flex justify-content-between align-items-center mb-4">
-        <h3 class="fw-bold" style="font-family: 'Chakra Petch', sans-serif; font-size: 30px;">Order History Details</h3>
-        
-        <div class="d-flex gap-3">
-            <input type="text" class="form-control" placeholder="Search Order ID or Product">
-            <select class="form-select" style="width: 200px;">
-                <option selected>Filter Status (All)</option>
-                <option value="1">Completed</option>
-                <option value="2">Shipped</option>
-                <option value="3">Processing</option>
-                <option value="4">Cancelled</option>
-            </select>
-        </div>
-    </div>
-
-    {{-- 3. ORDER LIST TABLE --}}
-    <div class="card p-4 shadow-sm" style="border-radius: 10px;">
-        
-        <div class="table-responsive">
-            <table class="table table-hover align-middle">
-                <thead>
-                    <tr style="font-family: 'Chakra Petch', sans-serif; font-weight: 600; font-size: 18px; color: #000000;">
-                        <th scope="col" style="width: 15%;">Order ID</th>
-                        <th scope="col" style="width: 15%;">Date</th>
-                        <th scope="col" style="width: 35%;">Product</th>
-                        <th scope="col" style="width: 10%;">Total ($)</th>
-                        <th scope="col" style="width: 10%;">Status</th>
-                        <th scope="col" style="width: 15%;">Action</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    @foreach ($orders as $order)
-                    <tr style="font-family: 'Montserrat', sans-serif; font-weight: 500;">
-                        <td class="fw-bold" style="color: #067CC2;">{{ $order['id'] }}</td>
-                        <td class="text-secondary">{{ $order['date'] }}</td>
-                        <td>
-                            <div class="d-flex align-items-center">
-                                <img src="{{ asset('images/' . $order['img_file']) }}" alt="Product" style="width: 50px; height: 50px; margin-right: 15px; object-fit: contain; border: 1px solid #eee; border-radius: 5px;">
-                                <span class="fw-bold text-dark">{{ $order['product'] }}</span>
-                            </div>
-                        </td>
-                        <td class="fw-bold text-success">${{ number_format($order['total'], 0, ',', '.') }}</td>
-                        <td>
-                            @if ($order['status'] == 'Completed')
-                                <span class="badge bg-success py-2 px-3">{{ $order['status'] }}</span>
-                            @elseif ($order['status'] == 'Shipped')
-                                <span class="badge bg-info py-2 px-3">{{ $order['status'] }}</span>
-                            @elseif ($order['status'] == 'Processing')
-                                <span class="badge bg-warning text-dark py-2 px-3">{{ $order['status'] }}</span>
-                            @else
-                                <span class="badge bg-danger py-2 px-3">{{ $order['status'] }}</span>
-                            @endif
-                        </td>
-                        <td>
-                            <div class="d-flex gap-2">
-                                <a href="#" class="btn btn-sm fw-bold" style="background: #067CC2; color: white; border-radius: 5px;">Detail</a>
-                                @if ($order['status'] == 'Shipped' || $order['status'] == 'Processing')
-                                    <button class="btn btn-sm btn-outline-danger" title="Ask for Cancellation">Batal</button>
-                                @endif
-                                @if ($order['status'] == 'Completed')
-                                    <button class="btn btn-sm btn-outline-dark" title="Download Invoice">Invoice</button>
-                                @endif
-                            </div>
-                        </td>
-                    </tr>
-                    @endforeach
-                </tbody>
-            </table>
-        </div>
-        
-        {{-- Pagination (Simulasi) --}}
-        <div class="d-flex justify-content-center mt-4">
-            <nav>
-              <ul class="pagination">
-                <li class="page-item disabled"><a class="page-link" href="#">&laquo;</a></li>
-                <li class="page-item active"><a class="page-link" href="#">1</a></li>
-                <li class="page-item"><a class="page-link" href="#">2</a></li>
-                <li class="page-item"><a class="page-link" href="#">3</a></li>
-                <li class="page-item"><a class="page-link" href="#">&raquo;</a></li>
-              </ul>
-            </nav>
-        </div>
-        
-    </div>
-    <div style="height: 100px;"></div>
-
 @endsection
 
 
+
 {{-- ================================================= --}}
-{{-- 3. FOOTER SECTION (@section('footer')) --}}
+{{-- 3. FOOTER --}}
 {{-- ================================================= --}}
 @section('footer')
     <style>
@@ -287,11 +245,12 @@
     </style>
     
     <footer class="main-footer">
-        
         <div class="page-container d-flex justify-content-between" style="gap: 197px;">
             <div class="d-flex flex-column" style="width: 343px; gap: 27px;">
-                <img src="{{ asset('images/gigagears-logo-footer.png') }}" alt="GIGAGEARS Logo" width="263" height="32">
-                <p style="font-family: 'Chakra Petch', sans-serif; font-style: italic; font-weight: 500; font-size: 22px; line-height: 29px; color: #000000;">Empowering your digital lifestyle with the best tech and software.</p>
+                <img src="{{ asset('images/logo GigaGears.png') }}" alt="GIGAGEARS Logo" width="263" height="32">
+                <p style="font-family: 'Chakra Petch', sans-serif; font-style: italic; font-weight: 500; font-size: 22px; line-height: 29px; color: #000000;">
+                    Empowering your digital lifestyle with the best tech and software.
+                </p>
             </div>
 
             <div class="d-flex" style="width: 740px; justify-content: space-between; gap: 155px;">
@@ -315,7 +274,7 @@
                 </div>
             </div>
         </div>
-        
+
         <div class="copyright page-container">
             © 2025 GigaGears. All Rights Reserved.
         </div>

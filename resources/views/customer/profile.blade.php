@@ -28,17 +28,27 @@
             
             <div class="d-flex" style="gap: 71px;">
                 <div class="d-flex gap-5">
-                    <a href="/" style="color: #000000; font-size:25px; text-decoration: none;">Home</a>
-                    <a href="/products" style="color: #000000; font-size:25px; text-decoration: none;">Products</a>
+                    <a href="{{ route('dashboard') }}" style="color: #000000; font-size:25px; text-decoration: none;">Home</a>
+                    <a href="{{ route('products.index') }}" style="color: #000000; font-size:25px; text-decoration: none;">Products</a>
                     <a href="/about-us" style="color: #000000; font-size:25px; text-decoration: none;">About Us</a>
-                    <a href="/my-order" style="color: #000000; font-size:25px; text-decoration: none;">My Order</a>
+                    <a href="{{ route('orders.index') }}" style="color: #000000; font-size:25px; text-decoration: none;">My Order</a>
+                                        <a href="{{ route('cart.index') }}" 
+                        class="position-relative text-decoration-none 
+                        {{ request()->routeIs('cart.index') ? 'text-primary fw-bold' : 'text-dark' }}">
+                        <i class="bi bi-cart3 fs-4"></i>
+                        @if($cartCount > 0)
+                            <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger fs-6">
+                                {{ $cartCount }}
+                            </span>
+                        @endif
+                    </a>
                 </div>
             </div>
 
-            <a href="/profile" class="d-flex align-items-center justify-content-center" style="border: 1px solid #000000; border-radius: 5px; padding: 10px; width: 135px; height: 52px; text-decoration: none; color: #000;">
+            <a href="{{ route('profile.edit') }}" class="d-flex align-items-center justify-content-center" style="border: 1px solid #000000; border-radius: 5px; padding: 10px; width: 135px; height: 52px; text-decoration: none; color: #000;">
                 <div class="d-flex align-items-center gap-2" style="gap: 9px;">
                     <span style="color: #067CC2;">Profil</span>
-                    <img src="{{ asset('images/logo foto profile.png') }}" alt="Profile" style="width: 32px; height: 32px; border-radius: 50%; border: 1px solid #067CC2;">
+                    <img src="{{ asset(Auth::user()->customerProfile->avatar_path ?? 'images/logo foto profile.png') }}" alt="Profile" style="width: 32px; height: 32px; border-radius: 50%; border: 1px solid #067CC2;">
                 </div>
             </a>
         </div>
@@ -49,12 +59,7 @@
 {{-- ================================================= --}}
 {{-- 2. KONTEN UTAMA (@section('content')) --}}
 {{-- ================================================= --}}
-(@section('content'))    
-    @if(session('error'))
-        <div class="alert alert-danger">
-            {{ session('error') }}
-        </div>
-    @endif
+@section('content')    
     {{-- Title & Log Out --}}
     <div class="d-flex justify-content-between align-items-center" style="width: 100%; margin-top: 50px; margin-bottom: 30px;">
         <div>
@@ -104,20 +109,190 @@
             </div>
 
             {{-- Edit Profile Button --}}
-            <a href="{{ route('profile.edit') }}" class="d-flex justify-content-center align-items-center" style="width: 179px; height: 54px; border: 1px solid #E33629; border-radius: 5px; color: #E33629; background: none; font-family: 'Chakra Petch', sans-serif; font-weight: 600; font-size: 24px; flex-shrink: 0; text-decoration: none;">
+            <button id="openEditProfile" type="button" class="d-flex justify-content-center align-items-center" style="width: 179px; height: 54px; border: 1px solid #E33629; border-radius: 5px; color: #E33629; background: none; font-family: 'Chakra Petch', sans-serif; font-weight: 600; font-size: 24px; flex-shrink: 0;">
                 Edit Profile
-            </a>
+            </button>
         </div>
     </div>
+
+    <!-- Edit Profile Modal -->
+    <div class="modal fade" id="editProfileModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content p-3">
+            <div class="modal-header border-0">
+                <h5 class="modal-title">Edit Profile</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+
+            <form id="editProfileForm" method="POST" action="{{ route('profile.settings.profile.update') }}">
+                @csrf
+
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label class="form-label">Name</label>
+                        <input name="name" id="profile_name" type="text" class="form-control" value="{{ old('name', $user->name) }}" required>
+                        <div class="invalid-feedback" id="error-name"></div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label">Email</label>
+                        <input name="email" id="profile_email" type="email" class="form-control" value="{{ old('email', $user->email) }}" required>
+                        <div class="invalid-feedback" id="error-email"></div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label">Phone</label>
+                        <input name="phone" id="profile_phone" type="text" class="form-control" value="{{ old('phone', $user->phone) }}" placeholder="{{ $user->phone ?? 'Enter your phone number' }}">
+                        <div class="invalid-feedback" id="error-phone"></div>
+                    </div>
+                </div>
+
+                <div class="modal-footer border-0">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button id="saveProfileBtn" type="submit" class="btn btn-primary">Save changes</button>
+                </div>
+            </form>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+        // if you're using Bootstrap 5
+        const editModalEl = document.getElementById('editProfileModal');
+        const openBtn = document.getElementById('openEditProfile');
+
+        if (openBtn && editModalEl) {
+            var modal = new bootstrap.Modal(editModalEl);
+            openBtn.addEventListener('click', () => modal.show());
+        }
+
+        // AJAX submit
+        const form = document.getElementById('editProfileForm');
+        if (!form) return;
+
+        form.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            // clear previous errors
+            ['name','email','phone'].forEach(k => {
+            const el = document.getElementById('error-' + k);
+            if (el) el.textContent = '';
+            const input = form.querySelector('[name="'+k+'"]');
+            if (input) input.classList.remove('is-invalid');
+            });
+
+            const btn = document.getElementById('saveProfileBtn');
+            btn.disabled = true;
+
+            const data = new FormData(form);
+
+            try {
+                    console.log("Submitting to:", form.action, "Method:", form.method);
+                    console.log("Form snapshot (masked):", Array.from(data.entries()).map(([k,v]) => [k, k.toLowerCase().includes('password') ? '***' : v]));
+
+                    const res = await fetch(form.action, {
+                        method: (form.method || 'POST').toUpperCase(),
+                        headers: {
+                            'X-Requested-With': 'XMLHttpRequest',
+                            'Accept': 'application/json',
+                            'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || ''
+                        },
+                        body: data,
+                        credentials: 'same-origin', // <--- critical: send cookies so auth session is included
+                        redirect: 'follow'
+                    });
+
+                    console.log('Fetch response status:', res.status, 'redirected:', res.redirected, 'url:', res.url);
+
+                    // If fetch followed a redirect to login, detect it
+                    if (res.redirected && res.url.includes('/login')) {
+                        alert('Session expired / not logged in. Please login again.');
+                        window.location = res.url;
+                        return;
+                    }
+
+                    const text = await res.clone().text();
+                    // helpful debug
+                    console.log('Response text snippet:', text.slice(0, 800));
+
+                    if (res.status === 422) {
+                        const json = await res.json();
+                        const errors = json.errors || json;
+                        Object.keys(errors).forEach(field => {
+                            const errEl = document.getElementById('error-' + field);
+                            const input = form.querySelector('[name="'+field+'"]');
+                            if (errEl) errEl.textContent = errors[field][0];
+                            if (input) input.classList.add('is-invalid');
+                        });
+                        btn.disabled = false;
+                        return;
+                    }
+
+                    if (res.ok) {
+                        // success: update small UI or reload
+                        location.reload();
+                    } else {
+                        // server error or unexpected; show text for debugging
+                        console.error('Update failed. Status:', res.status, 'Response:', text);
+                        alert('Update failed — check console and server logs.');
+                        btn.disabled = false;
+                    }
+                } catch (err) {
+                    console.error('Fetch error', err);
+                    alert('Network error — check console.');
+                    btn.disabled = false;
+                }
+            });
+        });
+    </script>
+
+
 
     {{-- Default Shipping Address --}}
     <div class="d-flex flex-column" style="gap: 11px;">
         <div class="section-title">Default Shipping Address</div>
-        <a href="{{ route('profile.edit') }}" class="profile-list-item" style="color: #1D1D1D; font-family: 'Montserrat', sans-serif; font-weight: 500; font-size: 22px;">
-            <span>{{ $user->address ?? 'No default address set' }}</span>
-            <span style="color: #067CC2;">Change</span>
-        </a>
+
+        {{-- Item utama --}}
+        <div id="address-section" class="profile-list-item flex-column align-items-start">
+            <div class="d-flex justify-content-between w-100 align-items-center">
+                <span style="font-family:'Montserrat',sans-serif;font-weight:500;font-size:22px;color:#1D1D1D;">
+                    {{ $user->address ?? 'No default address set' }}
+                </span>
+                <button id="toggleAddressForm" type="button" class="btn btn-link p-0"
+                    style="color:#067CC2;font-size:22px;text-decoration:none;">
+                    Change
+                </button>
+            </div>
+
+            {{-- Form ubah alamat (tersembunyi default) --}}
+            <form id="addressForm" method="POST" action="{{ route('profile.settings.address.update') }}"
+                style="{{ $errors->updateAddress->any() ? '' : 'display:none;' }}; width:100%; margin-top:20px;">
+                @csrf
+                <input type="text" name="address" value="{{ old('address', $user->address) }}"
+                    placeholder="Enter new shipping address"
+                    style="width:100%;padding:12px;border:1px solid #D5D5D5;border-radius:5px;font-size:18px;">
+
+                @error('address', 'updateAddress')
+                    <div class="text-danger mt-1" style="font-size:16px;">{{ $message }}</div>
+                @enderror
+
+                <button type="submit"
+                        style="width:180px;height:50px;margin-top:15px;background:#E33629;border:1px solid #E33629;
+                            border-radius:5px;color:#fff;font-family:'Chakra Petch',sans-serif;
+                            font-weight:600;font-size:20px;cursor:pointer;">
+                    Save Address
+                </button>
+            </form>
+        </div>
     </div>
+
+    <script>
+    document.getElementById('toggleAddressForm').addEventListener('click', () => {
+        const form = document.getElementById('addressForm');
+        form.style.display = form.style.display === 'none' ? 'block' : 'none';
+    });
+    </script>
+
 
     {{-- Payment Method --}}
     <div class="d-flex flex-column" style="gap: 11px; margin-top: 30px;">
@@ -148,25 +323,70 @@
             </div>
 
             {{-- Password Form (hidden by default) --}} 
-                <form id="passwordForm" method="POST" action="{{ route('profile.settings.password.update') }}" style="{{ $errors->updatePassword->any() ? '' : 'display:block;' }}; width:100%; margin-top:20px;">
+                <form id="passwordForm" method="POST" action="{{ route('profile.settings.password.update') }}"
+                    style="{{ $errors->updatePassword->any() ? '' : 'display:none;' }}; width:100%; margin-top:20px;">
                     @csrf
-                    
-                    <input type="password" name="current_password" placeholder="Current password">
-                        @error('current_password', 'updatePassword')
-                            <div class="text-danger">{{ $message }}</div>
-                        @enderror
 
-                        <input type="password" name="password" placeholder="New password">
-                        @error('password', 'updatePassword')
-                            <div class="text-danger">{{ $message }}</div>
-                        @enderror
+                    <div class="d-flex flex-column" style="gap: 15px; width: 100%;">
+                        {{-- Current Password --}}
+                        <div class="d-flex flex-column">
+                            <label style="font-family:'Montserrat',sans-serif;font-weight:500;font-size:18px;color:#1D1D1D;">
+                                Current Password
+                            </label>
+                            <input type="password" name="current_password" placeholder="Enter current password"
+                                style="border:1px solid #D5D5D5; border-radius:5px; padding:12px; font-size:18px; width:100%;">
+                            <span onclick="togglePassword('current_password', this)"
+                                style="position:absolute; right:12px; top:12px; cursor:pointer; font-size:20px;display:flex; align-items:center;">
+                                👁
+                            </span>    
+                            @error('current_password', 'updatePassword')
+                                <div class="text-danger mt-1" style="font-size:16px;">{{ $message }}</div>
+                            @enderror
+                        </div>
 
-                        <input type="password" name="password_confirmation" placeholder="Confirm password">
+                        {{-- New Password --}}
+                        <div class="d-flex flex-column">
+                            <label style="font-family:'Montserrat',sans-serif;font-weight:500;font-size:18px;color:#1D1D1D;">
+                                New Password
+                            </label>
+                            <input type="password" name="password" placeholder="Enter new password"
+                                style="border:1px solid #D5D5D5; border-radius:5px; padding:12px; font-size:18px; width:100%;">
+                            <span onclick="togglePassword('password', this)"
+                                style="position:absolute; right:12px; top:12px; cursor:pointer; font-size:20px;">
+                                👁
+                            </span>
+                            @error('password', 'updatePassword')
+                                <div class="text-danger mt-1" style="font-size:16px;">{{ $message }}</div>
+                            @enderror
+                        </div>
 
-                        <button type="submit">Update Password</button>
+                        {{-- Confirm Password --}}
+                        <div class="d-flex flex-column">
+                            <label style="font-family:'Montserrat',sans-serif;font-weight:500;font-size:18px;color:#1D1D1D;">
+                                Confirm New Password
+                            </label>
+                            <input type="password" name="password_confirmation" placeholder="Re-enter new password"
+                                style="border:1px solid #D5D5D5; border-radius:5px; padding:12px; font-size:18px; width:100%;">
+                            <span onclick="togglePassword('current_password', this)"
+                                style="position:absolute; right:12px; top:12px; cursor:pointer; font-size:20px;">
+                                👁
+                            </span>    
+                        </div>
+
+                        {{-- Submit Button --}}
+                        <button type="submit"
+                                style="width: 220px; height: 54px; background:#E33629; border:1px solid #E33629; border-radius:5px;
+                                    color:#FFFFFF; font-family:'Chakra Petch',sans-serif; font-weight:600; font-size:20px;
+                                    margin-top:10px; cursor:pointer;">
+                            Update Password
+                        </button>
+
                         @if (session('status') === 'password-updated')
-                            <div class="alert alert-success mt-2">Password updated successfully.</div>
+                            <div class="alert alert-success mt-3" style="font-size:18px;">
+                                Password updated successfully.
+                            </div>
                         @endif
+                    </div>
                 </form>
         </div>
 

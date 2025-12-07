@@ -38,8 +38,8 @@ class SellerController extends Controller
             ->join('Products as p', 'oi.product_id', '=', 'p.id')
             ->join('Orders as o', 'oi.order_id', '=', 'o.id')
             ->where('p.seller_store_id', $storeId)
-            ->whereMonth('o.order_date', now()->month)
-            ->whereYear('o.order_date', now()->year)
+            ->whereMonth('o.ordered_at', now()->month)
+            ->whereYear('o.ordered_at', now()->year)
             ->selectRaw('COALESCE(SUM(oi.subtotal), 0) as revenue')
             ->value('revenue');
 
@@ -58,8 +58,8 @@ class SellerController extends Controller
             ->join('Orders as o', 'oi.order_id', '=', 'o.id')
             ->where('p.seller_store_id', $storeId)
             ->selectRaw('
-                MONTH(o.order_date) as month,
-                YEAR(o.order_date) as year,
+                MONTH(o.ordered_at) as month,
+                YEAR(o.ordered_at) as year,
                 SUM(oi.subtotal) as revenue
             ')
             ->groupBy('year', 'month')
@@ -157,10 +157,13 @@ class SellerController extends Controller
         $validStatuses = ['pending','processing','shipped','delivered','completed','cancelled','refunded'];
         $status = $request->query('status');
 
-        $query = OrderItem::with(['product','order','order.user'])
-            ->whereHas('product', function($q) use ($seller) {
-                $q->where('seller_store_id', $seller->id);
-            });
+        $query = OrderItem::select('order_items.*')
+        ->join('products', 'order_items.product_id', '=', 'products.id')
+        ->join('orders', 'order_items.order_id', '=', 'orders.id')
+        ->join('shipping_orders', 'orders.id', '=', 'shipping_orders.order_id')
+        ->where('products.seller_store_id', $seller->id)
+        ->with(['product', 'order.shiporder', 'order.user']);
+
 
         // filter by order.status jika diberikan dan valid
         if (! empty($status) && in_array(strtolower($status), $validStatuses, true)) {

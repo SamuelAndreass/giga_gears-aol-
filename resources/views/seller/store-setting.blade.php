@@ -38,9 +38,12 @@
           <a class="nav-link active" href="{{ route('settings.index')}}"><i class="bi bi-gear"></i>Settings</a>
         </nav>
 
-        <div class="mt-4">
-          <button class="btn btn-outline-danger w-100"><i class="bi bi-box-arrow-right me-1"></i> Log Out</button>
+        <div class="mt-auto pb-4 px-3 pt-3 border-top">
+          <a class="btn btn-logout w-100" href="#" onclick="event.preventDefault();document.getElementById('logout-form').submit();"><i class="bi bi-box-arrow-right me-1"></i> Log Out</a>
         </div>
+        <form id="logout-form" action="{{ route('logout') }}" method="POST" style="display: none;">
+            @csrf
+        </form>
       </aside>
 
       <!-- ===== MAIN ===== -->
@@ -73,7 +76,7 @@
               <div class="row g-3 align-items-center">
                 <div class="col-auto">
                   <div class="position-relative">
-                    <img id="avatarPreviewOwner" src="{{ $cusT->avatar_path ? asset('storage/' . $cusT->avatar_path) : asset ('') }}" class="rounded-circle border" alt="avatar" style="width:80px;height:80px;object-fit:cover">
+                    <img id="avatarPreviewOwner" src="{{ $cusT->avatar_path ? asset('storage/' . $cusT->avatar_path) : asset ('images/pp.webp') }}" class="rounded-circle border" alt="avatar" style="width:80px;height:80px;object-fit:cover">
                     <button class="btn btn-sm btn-light position-absolute bottom-0 end-0 rounded-circle border" id="btnAvatarPickOwner" title="Change avatar" type="button" aria-label="Change avatar">
                       <i class="bi bi-camera-fill"></i>
                     </button>
@@ -112,7 +115,7 @@
                   <div class="col-auto">
                     <div class="position-relative">
                       <!-- Store avatar -->
-                        <img id="avatarPreviewStore" src="{{ $store->store_logo ? asset('storage/' . $store->store_logo) : asset('images/profile-large.png') }}" class="rounded-circle border" alt="avatar" style="width:80px;height:80px;object-fit:cover">
+                        <img id="avatarPreviewStore" src="{{ $store->store_logo ? asset('storage/' . $store->store_logo) : asset ('images/pp.webp') }}" class="rounded-circle border" alt="avatar" style="width:80px;height:80px;object-fit:cover">
                         <button class="btn btn-sm btn-light position-absolute bottom-0 end-0 rounded-circle border" id="btnAvatarPickStore" title="Change avatar" type="button">
                           <i class="bi bi-camera-fill"></i>
                         </button>

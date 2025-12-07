@@ -11,7 +11,8 @@ use Illuminate\View\View;
 use App\Models\CustomerProfile;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Validation\Rules\Password;
-
+use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Log;
 class ProfileController extends Controller
 {
     /**
@@ -33,25 +34,33 @@ class ProfileController extends Controller
     /**
      * Update the user's profile information.
      */
-     public function updateProfile(Request $request): RedirectResponse
+    public function updateProfile(Request $request)
     {
+        Log::info("updateProfile HIT", $request->all());
         $user = $request->user();
-
         $validator = Validator::make($request->all(), [
             'name' => ['required','string','max:255'],
             'email' => ['required','email','max:255','unique:users,email,' . $user->id],
-            'phone' => ['nullable','string','max:20'],
+            'phone' => ['nullable', 'regex:/^\+?[0-9]{9,15}$/'],
             'address' => ['nullable','string','max:255'],
         ]);
 
         if ($validator->fails()) {
+            if ($request->wantsJson() || $request->ajax()) {
+                return response()->json(['errors' => $validator->errors()], 422);
+            }
             return back()->withErrors($validator, 'updateProfile')->withInput();
         }
 
         $user->update($validator->validated());
 
+        if ($request->wantsJson() || $request->ajax()) {
+            return response()->json(['status' => 'ok']);
+        }
+
         return back()->with('status', 'profile-updated');
     }
+
 
     public function updatePassword(Request $request): RedirectResponse
     {

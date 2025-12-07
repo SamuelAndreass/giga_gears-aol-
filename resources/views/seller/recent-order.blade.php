@@ -124,7 +124,7 @@
                       </td>
 
                       <td>
-                        {{ optional($item->order)->status ?? '-' }}
+                        {{ ucfirst(optional($item->order)->status)  ?? '-' }}
                       </td>
 
                       <td>
@@ -143,11 +143,13 @@
                       </td>
 
                       <td>
-                        <button class="btn btn-primary" onclick="openUpdateModal({{ $item->order->id }})">
-                            Update
-                        </button>
-
+                          @if(in_array(optional($item->order)->status, ['pending', 'processing']))
+                              <button class="btn btn-primary" onclick="openUpdateModal({{ $item->order->id }})">
+                                  Update
+                              </button>
+                          @endif
                       </td>
+
                     </tr>
                   @empty
                     <tr>

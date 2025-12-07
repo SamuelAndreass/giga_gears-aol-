@@ -9,6 +9,8 @@ use App\Http\Controllers\SettingsController;
 use App\Http\Controllers\Auth\SocialAuthController;
 USE App\Http\Controllers\HomeController;
 use App\Http\Controllers\CustController;
+use App\Http\Controllers\CheckoutController;
+
 
 Route::middleware('guest')->group(function () {
     Route::get('/login', [\App\Http\Controllers\Auth\AuthenticatedSessionController::class, 'create'])->name('login');
@@ -42,22 +44,27 @@ Route::middleware(['auth', 'ensure.active'])->group(function(){
     Route::view('/become-seller', 'seller.seller-setup-store')->name('become.seller.page');
     Route::get('/become-seller/store', [SellerController::class, 'store'])->name('become.seller');
     Route::view('/checkout', 'customer.checkout')->name('checkout');
-    Route::get('/my-order', [CustController::class, 'myOrders'])->name('my.order');
-    Route::get('/products/{id}/detail', [CustController::class, 'showProd'])->name('product.detail');
-    Route::get('/cart', [CartController::class, 'index'])->name('cart.index');
-    Route::post('/cart/add/{product}', [CartController::class, 'add'])->name('cart.add');
-    Route::post('/cart/update/{item}', [CartController::class, 'update'])->name('cart.update');
-    Route::delete('/cart/remove/{item}', [CartController::class, 'remove'])->name('cart.remove');
+    Route::get('/my-order', [CustController::class, 'myOrders'])->name('orders.index');
+    Route::get('/orders/{order}', [CustController::class, 'show'])->name('orders.show');
+    Route::post('/orders/{order}/cancel', [CustController::class, 'cancel'])->name('orders.cancel');
     Route::view('/seller/dashboard', 'seller.dashboard'); 
     Route::view('/profile', 'customer.profile');
-    Route::view('/product/{slug}', 'customer.product-detail');
-    Route::view('/products', 'customer.product-detail');
+    Route::get('/products', [CustController::class, 'showProducts'])->name('products.index');
+    Route::get('/products/{id}/detail', [CustController::class, 'showProd'])->name('product.detail');
+    Route::get('/cart', [CartController::class, 'index'])->name('cart.index');
+    Route::post('/cart/add', [CartController::class, 'add'])->name('cart.add');
+    Route::put('/cart/update/{itemId}', [CartController::class, 'update'])->name('cart.update');
+    Route::delete('/cart/item/{item}', [CartController::class, 'remove'])->name('cart.remove');
+    Route::get('/checkout', [CheckoutController::class, 'showCheckoutPage'])->name('checkout.index');
+    Route::post('/process-checkout', [CheckoutController::class, 'checkout'])->name('checkout.process');
+    Route::post('/checkout/shipping-fee', [CheckoutController::class, 'getShippingFee'])->name('checkout.shipping_fee');
+    Route::post('/buy-now/redirect', [CartController::class, 'buyNowRedirect'])->name('buy_now.redirect');
+    Route::post('/buy-now/immediate', [CartController::class, 'buyNowImmediate'])->name('buy_now.immediate');
 });
 
 
 // seller
 Route::middleware(['auth','ensure.seller', 'ensure.active', 'store.active'])->prefix('seller')->group(function(){
-
     Route::get('/orders/{id}/ship-data', [SellerController::class, 'shipData'])->name('seller.orders.shipData');
     Route::post('/orders/{id}/ship', [SellerController::class, 'ship'])->name('seller.orders.ship');
     Route::get('/dashboard', [SellerController::class, 'viewMainDashboard'])->name('seller.index');
@@ -77,6 +84,7 @@ Route::middleware(['auth','ensure.seller', 'ensure.active', 'store.active'])->pr
     Route::put('settings/password', [SettingsController::class, 'updatePassword'])->name('settings.password.update');
     Route::get('/seller/orders-over-time/data', [SellerController::class, 'data'])->name('seller.orders-over-time.data');
     Route::delete('settings/store', [SettingsController::class, 'destroyStore'])->name('settings.store.destroy');
+
 
 });
 
@@ -100,6 +108,7 @@ Route::middleware(['auth', 'ensure.admin'])->prefix('admin')->group(function(){
     Route::get('/sellers/{seller}/json', [AdminController::class, 'sellerJson'])->name('admin.sellers.json');
     Route::get('/admin/sellers/{seller}/products', [AdminController::class, 'sellerProductsJson']);
     Route::patch('/sellers/{seller}/status', [AdminController::class, 'updateStatusSeller'])->name('admin.sellers.update-status');
+    Route::post('/shipping/{id}/toggle', [AdminController::class, 'toggle'])->name('admin.shipping.toggle');
 });
 
 

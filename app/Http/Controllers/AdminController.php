@@ -11,7 +11,8 @@ use App\Models\Product;
 use App\Models\SellerStore;
 use Illuminate\Support\Facades\DB;
 use App\Models\Shipping;
-
+use Illuminate\Support\Facades\Log;
+use Symfony\Component\HttpFoundation\Response;
 class AdminController extends Controller
 {
     //
@@ -268,7 +269,7 @@ class AdminController extends Controller
 
         //eager load ke relasi terkait
         $q->with([
-            'order:id,user_id,order_code,total_amount,status,order_date',
+            'order:id,user_id,order_code,total_amount,status,ordered_at',
             'order.user:id,name,email',
             'product:id,name,original_price,seller_store_id',
             'product.sellerStore:id,store_name' // pastikan relasi bernama sellerStore
@@ -279,6 +280,61 @@ class AdminController extends Controller
         $items = $q->latest('created_at')->paginate(25)->withQueryString();
 
         return view('admin.data-transaction', compact('items'));
+    }
+
+    public function toggle(Request $request, $id)
+    {
+
+        DB::beginTransaction();
+        try {
+            $shipping = Shipping::lockForUpdate()->find($id);
+
+            if (! $shipping) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Shipping method not found'
+                ], Response::HTTP_NOT_FOUND);
+            }
+
+            // Normalize status values (you may have different convention; adjust accordingly)
+            $current = $shipping->status ?? 'inactive';
+            $newStatus = ($current === 'active') ? 'inactive' : 'active';
+
+            // update and save
+            $old = $shipping->status;
+            $shipping->status = $newStatus;
+            $shipping->save();
+
+            // optional: write to audit log table or laravel log
+            Log::info('Shipping status toggled', [
+                'shipping_id' => $shipping->id,
+                'old_status' => $old,
+                'new_status' => $newStatus,
+                'by_user_id' => $request->user()?->id,
+            ]);
+
+            DB::commit();
+
+            return response()->json([
+                'success' => true,
+                'id' => $shipping->id,
+                'status' => $shipping->status,
+                'message' => 'Shipping status updated'
+            ], Response::HTTP_OK);
+        } catch (\Throwable $e) {
+            DB::rollBack();
+            Log::error('Failed to toggle shipping status', [
+                'id' => $id,
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString(),
+                'by_user_id' => $request->user()?->id,
+            ]);
+
+            return response()->json([
+                'success' => false,
+                'message' => 'Failed to update shipping status'
+            ], Response::HTTP_INTERNAL_SERVER_ERROR);
+        }
     }
 
     public function shippingIndex(){
